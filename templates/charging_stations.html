@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1>Your Charging Stations</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Address</th>
+            <th>Charger</th>
+            <th>Status</th>
+            <th>Working Hours</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for charging_station in charging_stations %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ charging_station.address }}</td>
+            <td>{{ charging_station.charger }}</td>
+            <td>{{ charging_station.station_status }}</td>
+            <td>{{ charging_station.working_hours_start }} - {{ charging_station.working_hours_finish }}</td>
+            <td>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ charging_station.id }}">
+                    Edit Working Hours
+                </button>
+            </td>
+        </tr>
+        <!-- Modal for editing working hours -->
+        <div class="modal fade" id="editModal{{ charging_station.id }}" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">Edit Working Hours</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action = "{% url 'edit_working_hours' %}">
+                            {% csrf_token %}
+                            <label for="working_hours_start">Working Hours Start:</label>
+                            <input type="time" name="working_hours_start" value="{{ charging_station.working_hours_start }}">
+                            <label for="working_hours_finish">Working Hours Finish:</label>
+                            <input type="time" name="working_hours_finish" value="{{ charging_station.working_hours_finish }}">
+                            <input type="hidden" name="charging_station_id" value="{{ charging_station.id }}">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a class="btn btn-primary" href="{% url 'Create A Charging Station' %}">Add A New Charging Station</a>
+{% endblock %}

@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% block content%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Google Map</title>
+  <style>
+    header {
+      background-color: #333;
+      color: #fff;
+      padding: 10px;
+    }
+    h1 {
+      margin: 0;
+    }
+    body {
+    font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 500px;
+      width: 100%;
+    }
+    #search-bar {
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #address-input {
+      width: 300px;
+      padding: 5px;
+      font-size: 16px;
+    }
+    #search-button {
+      padding: 5px 15px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .iframe-container {
+            display: none;
+        }
+  </style>
+</head>
+<body>
+<header>
+    <h1>Hi {{user}} Find Your Charging Station</h1>
+</header>
+
+
+<div id="map" style="height: 400px;"></div>
+
+<script>
+  async function getAddressesFromServer() {
+      try {
+          const response = await fetch('/get_addresses/');
+          const addresses = await response.json();
+          return addresses;
+      } catch (error) {
+          console.error('Error fetching addresses:', error);
+      }
+  }
+
+  let map;
+  let markers = [];
+
+  async function initMap() {
+    const addresses = await getAddressesFromServer();
+    const geocoder = new google.maps.Geocoder();
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 8,
+        center: { lat: 32, lng: 34 },
+    });
+
+    addresses.forEach(async address => {
+        geocoder.geocode({ address }, async (results, status) => {
+            if (status === 'OK') {
+                const marker = new google.maps.Marker({
+                    map,
+                    position: results[0].geometry.location,
+                });
+
+                const infoWindow = new google.maps.InfoWindow();
+                await fetch(`/get_info/?address=${encodeURIComponent(address)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        infoWindow.setContent(`
+                            <h3>${address}</h3>
+                            <p>Charger: ${data.charger}</p>
+                            <p>Description: ${data.description}</p>
+                        `);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching info:', error);
+                    });
+
+                marker.addListener('click', () => {
+                    infoWindow.open(map, marker);
+                });
+
+                markers.push(marker);
+            } else {
+                console.error('Geocode was not successful for the following reason:', status);
+            }
+        });
+    });
+}
+
+
+async function searchAddress() {
+  const searchInput = document.getElementById('searchInput').value;
+  const geocoder = new google.maps.Geocoder();
+
+  geocoder.geocode({ address: searchInput }, async (results, status) => {
+    if (status === 'OK') {
+      const userLocation = results[0].geometry.location;
+
+      // Calculate distances and sort charging stations by distance
+      const chargingStationsWithDistance = markers.map(marker => {
+        const stationLocation = marker.getPosition();
+        const distance = google.maps.geometry.spherical.computeDistanceBetween(
+          userLocation,
+          stationLocation
+        );
+        return { marker, distance };
+      });
+
+      chargingStationsWithDistance.sort((a, b) => a.distance - b.distance);
+
+      // Display the three closest charging stations
+      const closestStations = chargingStationsWithDistance.slice(0, 3);
+
+      const closestChargingStationsList = document.getElementById(
+        'closest-charging-stations'
+      );
+      closestChargingStationsList.innerHTML = '';
+
+      closestStations.forEach(station => {
+        const address = station.marker.getTitle();
+        const distanceInKm = (station.distance / 1000).toFixed(2);
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `<strong>${address}</strong> (Distance: ${distanceInKm} km)`;
+        closestChargingStationsList.appendChild(listItem);
+      });
+    } else {
+      console.error('Geocode was not successful for the following reason:', status);
+    }
+  });
+}
+
+</script>
+<hr>
+<script>
+  initMap();
+</script>
+
+  <!-- Add the Google Maps API script here (replace "YOUR_API_KEY" with your actual API key) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBlESR_sT43qVHo5P3Jquk9SuHsZwpL6Q&callback=initMap" async defer></script>
+
+    
+  <div id="charging-stations-list">
+  
+    <ul id="closest-charging-stations">
+      <!-- Results will be displayed here -->
+    </ul>
+  </div>
+<!-- Add this code to display charging station addresses -->
+<div class="container">
+  <h1>Find Your Charging Station</h1>
+
+  <form method="post" class="my-3">
+    {% csrf_token %}
+    {{ car_form.as_p }}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Search Charging Stations</button>
+  </form>
+  
+  <div class="card">
+      <div class="card-body">
+          <h3>Charging Stations</h3>
+          <ul>
+              {% for address in charging_station_addresses %}
+                  <li>{{ address }}</li>
+              {% empty %}
+                  <li>No charging stations found.</li>
+              {% endfor %}
+          </ul>
+      </div>
+  </div>
+</div>
+
+</div>
+
+
+</body>
+</html>
+{% endblock %}

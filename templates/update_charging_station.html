@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Charging Station</title>
+    <!-- Add Bootstrap CSS link -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Add datetimepicker CSS link -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker@3.0.5/daterangepicker.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-6">
+                <h1>Update Charging Station</h1>
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        {{ form.charging_station.label_tag }}
+                        {{ form.charging_station }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.working_hours_start.label_tag }}
+                        {{ form.working_hours_start }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.working_hours_finish.label_tag }}
+                        {{ form.working_hours_finish }}
+                    </div>
+                    <button type="submit" class="btn btn-primary">Apply Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Add jQuery and Bootstrap JS scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Add datetimepicker script -->
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker@3.0.5/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker@3.0.5/daterangepicker.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('.datetimepicker-input').daterangepicker({
+                singleDatePicker: true,
+                timePicker: true,
+                timePicker24Hour: true,
+                timePickerSeconds: true,
+                startDate: moment().startOf('hour'),
+                locale: {
+                    format: 'YYYY-MM-DD HH:mm:ss'
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+{% endblock %}

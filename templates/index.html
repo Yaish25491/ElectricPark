@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load media_tags %}
+
+{% block content %}
+<!DOCTYPE html>
+<style>
+  /* Your CSS styles go here */
+  body {
+      font-family: Arial, sans-serif;
+  }
+  
+  .custom-login-btn {
+      background-color: #155a66;
+      color: #FFFFFF;
+      border: none;
+      padding: 10px 40px;
+      font-size: 30px;
+  }
+  .custom-register-btn {
+      background-color: #155a66;
+      color: #FFFFFF;
+      border: none;
+      padding: 10px 20px;
+      font-size: 30px;
+  }
+  
+  /* Add more custom styles as needed */
+</style>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Electric Park</title>
+  <!-- Include Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.5.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+  <div class="container container text-center">
+    <!-- Use the custom template tag to insert the image by name -->
+    <img src="{{ MEDIA_URL }}media/images/my_image.png" alt="My Image" class="img-fluid" width="800" height="800">
+  </div>
+  <div class="container text-center">
+    <p class="lead">Welcome to Electric Park! Login or Register to find charging stations and more.</p>
+
+    <a href="{% url 'login' %}" class="custom-login-btn btn btn-success " >Login</a>
+    <a href="{% url 'register' %}" class="btn btn-primary custom-register-btn">Register</a>
+  </div>
+
+  <!-- Include Bootstrap JS (optional) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.5.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{% endblock %}

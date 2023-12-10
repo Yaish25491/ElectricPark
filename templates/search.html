@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h1>Find Charging Stations</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            {{ form.address.label_tag }}
+            {{ form.address }}
+        </div>
+        <div class="form-group">
+            {{ form.car.label_tag }}
+            {{ form.car }}
+        </div>
+        <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+</div>
+<!-- Display Google Maps with results here -->
+<div id="map" style="height: 400px;"></div>
+{% endblock %}

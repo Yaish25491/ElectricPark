@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* Your CSS styles go here */
+    body {
+        font-family: Arial, sans-serif;
+    }
+    
+    .custom-login-btn {
+        background-color: #155a66;
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 40px;
+        font-size: 30px;
+    }
+    .custom-register-btn {
+        background-color: #155a66;
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 20px;
+        font-size: 20px;
+    }
+    
+    /* Add more custom styles as needed */
+  </style>
+    <h1>Car Selection Form</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Select</button>
+    </form>
+    <hr>
+    <a class="btn btn-primary custom-register-btn" href="{% url 'Create A Charging Station' %}">Continue to create a Charging Station</a>
+
+{% endblock %}

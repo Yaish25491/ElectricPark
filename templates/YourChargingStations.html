@@ -1,0 +1,39 @@
+<!-- charging_station/templates/charging_station/charging_stations.html -->
+{% extends 'base.html' %}
+{% block content %}
+<h1>Your Charging Stations</h1>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Address</th>
+            <th>Charger</th>
+            <th>Status</th>
+            <th>Working Hours</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for charging_station in charging_stations %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ charging_station.address }}</td>
+            <td>{{ charging_station.charger }}</td>
+            <td>{{ charging_station.station_status }}</td>
+            <td>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="time" name="working_hours_start" value="{{ charging_station.working_hours_start }}">
+                    <input type="time" name="working_hours_finish" value="{{ charging_station.working_hours_finish }}">
+                    <input type="hidden" name="charging_station_id" value="{{ charging_station.id }}">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a class="btn btn-primary" href="{% url 'Create A Charging Station' %}">Add A New Charging Station</a>
+
+{% endblock %}

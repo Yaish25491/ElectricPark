@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content%}
+
+<html lang="en">
+<body>
+    
+    <!-- Add the iframe for upload_csv.html -->
+    <iframe width="800" height="600" srcdoc='
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Database Records</title>
+</head>
+<body>
+    <h1>Export Database Records</h1>
+    <form method="post">
+        <!-- CSRF Token (if applicable) -->
+        <input type="hidden" name="csrfmiddlewaretoken" value="your-csrf-token">
+        
+        <!-- Form fields (replace with your form fields) -->
+        <!-- For example, if it's a select input: -->
+        <label for="export_option">Export Option:</label>
+        <select name="export_option" id="export_option">
+            <option value="option1">Option 1</option>
+            <option value="option2">Option 2</option>
+            <!-- Add more options as needed -->
+        </select>
+        
+        <!-- Submit button -->
+        <button type="submit" class="btn btn-primary">Export CSV</button>
+    </form>
+</body>
+</html>'
+></iframe>    
+    <iframe width="800" height="600" srcdoc='<!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Upload CSV File</title>
+        </head>
+        <body>
+            <h1>Upload Cars CSV File</h1>
+            <form method="post" enctype="multipart/form-data">
+                <!-- CSRF Token (if applicable) -->
+                <input type="hidden" name="csrfmiddlewaretoken" value="your-csrf-token">
+                
+                <!-- Form fields (replace with your form fields) -->
+                <input type="file" name="file">
+                
+                <!-- Submit button -->
+                <button type="submit" class="btn btn-primary">Upload and Update</button>
+            </form>
+            <br>
+            <br>
+            <br>
+        </body>
+        </html>
+        '
+    ></iframe>
+
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,88 @@
+<!-- user_settings.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* Your CSS styles go here */
+    body {
+        font-family: Arial, sans-serif;
+    }
+    
+    .custom-login-btn {
+        background-color: #155a66;
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 40px;
+        font-size: 30px;
+    }
+    .custom-register-btn {
+        background-color: #155a66;
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 20px;
+        font-size: 20px;
+    }
+    
+    /* Add more custom styles as needed */
+</style>
+<div class="container mt-5">
+    <h1>Settings</h1>
+    <hr>
+    <!-- Display user details -->
+    <div class="mt-4">
+        <h2>User Details</h2>
+        <p><strong>First Name:</strong> {{ user_details.first_name }}</p>
+        <p><strong>Last Name:</strong> {{ user_details.last_name }}</p>
+        <p><strong>Username:</strong> {{ user_details.username }}</p>
+        <p><strong>Email:</strong> {{ user_details.email }}</p>
+    </div>
+    <hr>
+    <!-- Edit max_walking_distance -->
+    <div class="mt-4">
+        <h2>Edit Max Walking Distance</h2>
+        <form method="post" action="{% url 'update_max_walking_distance' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="max_walking_distance">Max Walking Distance:</label>
+                <input type="number" class="form-control" name="max_walking_distance" value="{{ max_walking_distance }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Update</button>
+        </form>
+    </div>
+    <hr>    
+    <!-- Display user cars -->
+    <div class="mt-4">
+        <h2>User's Cars</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Brand</th>
+                    <th>Model</th>
+                    <th>Plug Type</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for car in user_cars %}
+                    <tr>
+                        <td>{{ car.brand }}</td>
+                        <td>{{ car.car_model }}</td>
+                        <td>{{ car.plug_type }}</td>
+                        <td>
+                            <form method="post" action="{% if car.id %}{% url 'delete_user_car' car.id %}{% endif %}">
+                                {% csrf_token %}
+                                {% if car.id %}
+                                    <input type="hidden" name="car_id" value="{{ car.id }}">
+                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                {% else %}
+                                    <p>This car cannot be deleted.</p>
+                                {% endif %}
+                            </form>
+                            
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
