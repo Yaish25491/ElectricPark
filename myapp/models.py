@@ -5,14 +5,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.contrib import admin
 
-# Create your models here.
-#class Messege(models.Model):
-#    text = models.CharField(max_length=200)
-#    date = models.DateField()
-
-#    def __str__(self):
-#        return self.text
-    
 
 class Item(models.Model):
     name = models.CharField(max_length=100)
@@ -33,11 +25,11 @@ class Car(models.Model):
     brand = models.CharField('Brand' ,max_length=200)
     car_model = models.CharField('Model', max_length=200)
     battery_pack_kwh = models.CharField('battery_pack_kwh', max_length=200)
-    #plug_type = models.ForeignKey(Charger,null=True, on_delete= models.CASCADE)
     plug_type = models.CharField('Plug Type',default="", max_length=100)
     def __str__(self):
         return (f"{self.brand} - {self.car_model} - {self.plug_type}")
     
+
 class UserCars(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     cars = models.ManyToManyField(Car)
@@ -79,9 +71,6 @@ class User(models.Model):
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
     
-
-
-
     
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'max_walking_distance']

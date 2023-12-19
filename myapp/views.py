@@ -34,9 +34,6 @@ def choose_a_car(request):
         form = CarSelectionForm(request.POST)
         if form.is_valid():
             selected_car_id = form.cleaned_data['car']
-
-            # Assuming you have a UserCars model linking User and Car
-            # Replace 'UserCars' with your actual model
             user_cars, created = UserCars.objects.get_or_create(user=request.user)
 
             # Associate the selected car with the user's profile using SQL
@@ -46,7 +43,7 @@ def choose_a_car(request):
                     INSERT INTO myapp_usercars_cars (usercars_id, car_id)
                     VALUES (%s, %s)
                     """,
-                    [user_cars.id, selected_car_id.id]  # Use selected_car_id.id
+                    [user_cars.id, selected_car_id.id]
                 )
 
             messages.success(request, 'Car added successfully!')
@@ -61,9 +58,7 @@ def delete_user_car(request, car_id):
     if request.method == 'POST':
         form = DeleteCarForm(request.POST)
         if form.is_valid():
-            # Perform your deletion logic here
             car_id = form.cleaned_data['car_id']
-            # Your deletion logic goes here
             return redirect('user_settings')
     else:
         form = DeleteCarForm(initial={'car_id': car_id})
@@ -86,10 +81,6 @@ def create_charging_station(request):
     context = {'form': form}
     return render(request, 'CreateAChargingStation.html', context)
     
-
-from django.shortcuts import render
-from django.db import connection
-import googlemaps
 
 def home(request):
     charging_stations = ChargingStation.objects.all()
@@ -209,15 +200,6 @@ def home(request):
 def new_user(request):
     return render(request, "NewUser.html", {})
 
-#def get_messeges_query():
- #   return Messege.objects.raw("SELECT * FROM myapp_messege")
-   
-#def tamplate_quary():
-#    name = "Banana"
-#    age = 0
-#    return Messege.objects.raw("SELECT * \
-#                               FROM myapp_messege \
-#                               WHARE user = %s AND age = %s",[name, age])
 
 def dropdown_view(request):
     items = Item.objects.all()
@@ -426,7 +408,6 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f'Updated Car: {car}'))
 
 def custom_charging_stations_view(request):
-    # Ensure the user is logged in
 
     user = request.user  # Get the currently logged-in user
 
