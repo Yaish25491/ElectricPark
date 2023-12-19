@@ -1,4 +1,4 @@
-import datetime, csv, os
+import datetime, csv, os, googlemaps 
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
@@ -87,16 +87,19 @@ def create_charging_station(request):
     return render(request, 'CreateAChargingStation.html', context)
     
 
-
-
+from django.shortcuts import render
+from django.db import connection
+import googlemaps
 
 def home(request):
     charging_stations = ChargingStation.objects.all()
-    charging_station_addresses = []
+    charging_station_distances = []
 
     if request.method == 'POST':
         form = ChargingStationSearchForm(request.user, request.POST)
         if form.is_valid():
+            user_address = form.cleaned_data['address']  # Use the user's input address
+
             selected_car_name = form.cleaned_data['car'].id
 
             # Step 1: Get the car's plug_type
@@ -140,12 +143,67 @@ def home(request):
                             [plug_type_id]
                         )
                         charging_stations = cursor.fetchall()
-                        charging_station_addresses = [station[1] for station in charging_stations]
+
+                        # Step 4: Requires API key for Google Maps API
+                        gmaps = googlemaps.Client(key='AIzaSyCBlESR_sT43qVHo5P3Jquk9SuHsZwpL6Q')
+
+                        # Step 5: Iterate through each charging station
+                        for charging_station in charging_stations:
+                            charging_station_id, charging_station_address = charging_station
+
+                            # Step 6: Use Google Maps Distance Matrix API to calculate distance
+                            distance_matrix = gmaps.distance_matrix(user_address, charging_station_address)['rows'][0]['elements'][0]
+                            distance = distance_matrix['distance']['text'] if 'distance' in distance_matrix else 'N/A'
+
+                            # Step 7: Append charging station address and distance to the list
+                            charging_station_distances.append({
+                                'id': charging_station_id,
+                                'address': charging_station_address,
+                                'distance': distance
+                            })
 
     else:
         form = ChargingStationSearchForm(user=request.user)
 
-    return render(request, 'home.html', {'form': form, 'charging_stations': charging_stations, 'charging_station_addresses': charging_station_addresses})
+    # Step 8: Filter charging stations based on max_walking_distance
+    max_walking_distance = None
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT max_walking_distance
+            FROM myapp_profile
+            WHERE user_id = %s
+            """,
+            [request.user.id]
+        )
+        result = cursor.fetchone()
+        max_walking_distance = result[0] if result is not None else None
+
+    filtered_charging_stations = []
+
+    if max_walking_distance is not None:
+        # Convert the distance values to meters before comparison
+        charging_station_distances_numeric = [
+            {
+                'id': station['id'],
+                'address': station['address'],
+                'distance': round(float(station['distance'].split(' ')[0]) * 1000, 2)  # Convert km to meters
+            }
+            for station in charging_station_distances
+        ]
+
+        filtered_charging_stations = [
+            station for station in charging_station_distances_numeric
+            if station['distance'] <= max_walking_distance
+        ]
+
+    context = {
+        'form': form,
+        'charging_stations': filtered_charging_stations,
+        'charging_station_distances': charging_station_distances,
+    }
+
+    return render(request, 'home.html', context)
 
 
 def new_user(request):
@@ -562,4 +620,35 @@ def update_max_walking_distance(request):
 
 
 
+def distance_calculation(request):
+    # Step 1: Get the user's address from the request's GET parameters
+    user_address = request.GET.get('address')
+    
+    # Step 2: Initialize an empty list to store charging station addresses and distances
+    charging_station_distances = []
 
+    # Step 3: Fetch all charging station IDs and addresses from the database
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT id, address FROM myapp_chargingstation')
+        charging_stations = cursor.fetchall()
+
+    # Step 4: Requires API key for Google Maps API
+    gmaps = googlemaps.Client(key='AIzaSyCBlESR_sT43qVHo5P3Jquk9SuHsZwpL6Q&callback=initMap')
+
+    # Step 5: Iterate through each charging station
+    for charging_station in charging_stations:
+        charging_station_id, charging_station_address = charging_station
+
+        # Step 6: Use Google Maps Distance Matrix API to calculate distance
+        distance_matrix = gmaps.distance_matrix(user_address, charging_station_address)['rows'][0]['elements'][0]
+        distance = distance_matrix['distance']['text'] if 'distance' in distance_matrix else 'N/A'
+
+        # Step 7: Append charging station address and distance to the list
+        charging_station_distances.append({
+            'id': charging_station_id,
+            'address': charging_station_address,
+            'distance': distance
+        })
+
+    # Step 8: Return the list of charging station addresses and distances
+    return charging_station_distances

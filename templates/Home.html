@@ -169,7 +169,7 @@ async function searchAddress() {
       <!-- Results will be displayed here -->
     </ul>
   </div>
-<!-- Add this code to display charging station addresses -->
+
 <div class="container">
   <h1>Find Your Charging Station</h1>
 
@@ -183,16 +183,35 @@ async function searchAddress() {
   <div class="card">
       <div class="card-body">
           <h3>Charging Stations</h3>
-          <ul>
-              {% for address in charging_station_addresses %}
-                  <li>{{ address }}</li>
-              {% empty %}
-                  <li>No charging stations found.</li>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Charging Station</th>
+                <th>Distance</th>
+                <th>Navigation</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in charging_station_distances %}
+                <tr>
+                  <td>{{ item.address }}</td>
+                  <td>{{ item.distance }}</td>
+                  <td>
+                    <form action="https://www.google.com/maps" method="get" target="_blank">
+                      <input type="hidden" name="q" value="{{ item.address }}">
+                      <button type="submit" class="btn btn-success">Navigate</button>
+                    </form>
+                  </td>
+                </tr>
               {% endfor %}
-          </ul>
+            </tbody>
+          </table>
       </div>
   </div>
 </div>
+
+
+
 
 </div>
 

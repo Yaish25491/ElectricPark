@@ -53,7 +53,7 @@ class ChargingStation(models.Model):
     description = models.CharField('description', null=True, max_length=200)
     working_hours_start = models.TimeField('working hours start', null=True)
     working_hours_finish = models.TimeField('working hours finish', null=True)
-    station_status = models.CharField('station status', max_length=10, choices=[('Used', 'Used'), ('Available', 'Available'), ('Off', 'Off')], default='Available')
+    station_status = models.CharField('station status', max_length=100, choices=[('Used', 'Used'), ('Available', 'Available'), ('Off', 'Off')], default='Available')
 
     def __str__(self):
         return f'{self.user} {self.address} {self.charger}'
