@@ -144,13 +144,14 @@ def home(request):
 
                             # Step 6: Use Google Maps Distance Matrix API to calculate distance
                             distance_matrix = gmaps.distance_matrix(user_address, charging_station_address)['rows'][0]['elements'][0]
-                            distance = distance_matrix['distance']['text'] if 'distance' in distance_matrix else 'N/A'
-
+                            distance = distance_matrix['distance']['value'] if 'distance' in distance_matrix else 'N/A'
+                            distance_text = distance_matrix['distance']['text'] if 'distance' in distance_matrix else 'N/A'
                             # Step 7: Append charging station address and distance to the list
                             charging_station_distances.append({
                                 'id': charging_station_id,
                                 'address': charging_station_address,
-                                'distance': distance
+                                'distance': distance,
+                                'distance_text': distance_text
                             })
 
     else:
@@ -173,19 +174,17 @@ def home(request):
     filtered_charging_stations = []
 
     if max_walking_distance is not None:
-        # Convert the distance values to meters before comparison
-        charging_station_distances_numeric = [
+        max_walking_distance = float(max_walking_distance)  # Ensure it's a float
+        filtered_charging_stations = [
             {
                 'id': station['id'],
                 'address': station['address'],
-                'distance': round(float(station['distance'].split(' ')[0]) * 1000, 2)  # Convert km to meters
+                'distance': float(station['distance']),  # Ensure it's a float
+                'distance_text': station['distance_text'],
+                'max': max_walking_distance
             }
             for station in charging_station_distances
-        ]
-
-        filtered_charging_stations = [
-            station for station in charging_station_distances_numeric
-            if station['distance'] <= max_walking_distance
+            if float(station['distance']) <= max_walking_distance
         ]
 
     context = {
@@ -195,6 +194,8 @@ def home(request):
     }
 
     return render(request, 'home.html', context)
+
+
 
 
 def new_user(request):

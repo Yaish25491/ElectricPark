@@ -50,6 +50,15 @@ class ChargingStation(models.Model):
     def __str__(self):
         return f'{self.user} {self.address} {self.charger}'
     
+class ChargingSchedule(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    charging_station = models.ForeignKey(ChargingStation, on_delete=models.CASCADE)
+    scheduled_start_time = models.TimeField()
+    scheduled_end_time = models.TimeField()
+
+    def __str__(self):
+        return f'{self.user} {self.charging_station} {self.scheduled_start_time} to {self.scheduled_end_time}'
+    
 
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)    

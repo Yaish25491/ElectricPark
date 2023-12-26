@@ -14,9 +14,6 @@
                   <a class="nav-link" aria-current="page" href="{% url 'active orders' %}">Active Orders</a>
               </li>
               <li class="nav-item">
-                  <a class="nav-link" href="{% url 'DBcontrol' %}">DB Control</a>
-              </li>
-              <li class="nav-item">
                   <a class="nav-link" href="{% url 'update_charging_station' %}">Update Charging Station</a>
               </li>
               <li class="nav-item">
@@ -32,8 +29,30 @@
               {% endif %}
           </ul>
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-              <!-- User Dropdown Menu -->
-              {% if user.is_authenticated %}
+            <!-- Admin Dropdown Menu -->
+            {% if user.is_authenticated and user.is_staff %}
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle me-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">Admin</a>
+                <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1000;">
+                    <li><a class="dropdown-item" href="{% url 'upload_csv' %}">Update Car list via CSV </a></li>
+                    <li><a class="dropdown-item" href="{% url 'export_records' %}">Export DB Tables</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="http://127.0.0.1:8000/admin/">Admin Portal</a></li>
+                </ul>
+            </li>  
+            <!-- User Dropdown Menu -->
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle me-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ user.username }}</a>
+                <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1000;">
+                    <li><a class="dropdown-item" href="{% url 'user settings' %}">User Settings</a></li>
+                    <li><a class="dropdown-item" href="{% url 'order history' %}">Order History</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                </ul>
+            </li>
+           
+              {% elif user.is_authenticated %}
+               <!-- User Dropdown Menu -->
               <li class="nav-item dropdown">
                   <a class="nav-link dropdown-toggle me-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">{{ user.username }}</a>
                   <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1000;">
