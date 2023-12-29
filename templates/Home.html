@@ -193,20 +193,20 @@ async function searchAddress() {
               </tr>
             </thead>
             <tbody>
-              {% for item in charging_station_distances %}
-                <tr>
+              {% for item in charging_stations %}
+              <tr>
                   <td>{{ item.address }}</td>
                   <td>{{ item.distance_text }}</td>
                   <td>{{ item.max }}</td>
                   <td>
-                    <form action="https://www.google.com/maps" method="get" target="_blank">
-                      <input type="hidden" name="q" value="{{ item.address }}">
-                      <button type="submit" class="btn btn-success">Navigate</button>
-                    </form>
+                      <form action="https://www.google.com/maps" method="get" target="_blank">
+                          <input type="hidden" name="q" value="{{ item.address }}">
+                          <button type="submit" class="btn btn-success">Navigate</button>
+                      </form>
                   </td>
-                </tr>
+              </tr>
               {% endfor %}
-            </tbody>
+          </tbody>
           </table>
       </div>
   </div>

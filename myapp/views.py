@@ -1,4 +1,4 @@
-import datetime, csv, os, googlemaps 
+import datetime, csv, os, googlemaps, logging
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
@@ -13,7 +13,6 @@ from django.contrib import messages
 from django.core.management.base import BaseCommand
 from django.http import HttpResponse, JsonResponse
 from django.db import connection, connections
-
 
 def index(request):
     if request.user.is_authenticated:
@@ -83,6 +82,7 @@ def create_charging_station(request):
     
 
 def home(request):
+    print("Home")
     charging_stations = ChargingStation.objects.all()
     charging_station_distances = []
 
@@ -159,6 +159,8 @@ def home(request):
 
     # Step 8: Filter charging stations based on max_walking_distance
     max_walking_distance = None
+    filtered_charging_stations = []
+
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -169,31 +171,52 @@ def home(request):
             [request.user.id]
         )
         result = cursor.fetchone()
-        max_walking_distance = result[0] if result is not None else None
-
-    filtered_charging_stations = []
+        max_walking_distance = float(result[0]) if result is not None else None
 
     if max_walking_distance is not None:
-        max_walking_distance = float(max_walking_distance)  # Ensure it's a float
+        # Ensure that the distance field is a string with both value and unit
+        charging_station_distances_numeric = [
+            {
+                'id': station['id'],
+                'address': station['address'],
+                'distance': f"{station['distance']} m",  # Assuming distance is in meters
+                'distance_text': station['distance_text'],
+            }
+            for station in charging_station_distances
+        ]
+        print("********** results before filtering strats here **********")
+        print(charging_station_distances_numeric)
+        print("********** results ends here **********")
+        # Step 9: Filter charging stations based on max_walking_distance
         filtered_charging_stations = [
             {
                 'id': station['id'],
                 'address': station['address'],
-                'distance': float(station['distance']),  # Ensure it's a float
+                'distance': station['distance'],
                 'distance_text': station['distance_text'],
-                'max': max_walking_distance
+                'max': max_walking_distance,
             }
-            for station in charging_station_distances
-            if float(station['distance']) <= max_walking_distance
+            for station in charging_station_distances_numeric
+            if float(station['distance'].split(' ')[0]) <= max_walking_distance
         ]
+
+        # Step 10: Print the difference for each filtered charging station
+        for station in filtered_charging_stations:
+            distance_numeric = float(station['distance'].split(' ')[0])
+            difference = distance_numeric - max_walking_distance
+            print(f"Distance: {distance_numeric} m, Max Walking Distance: {max_walking_distance} m, Difference: {difference} m")
 
     context = {
         'form': form,
         'charging_stations': filtered_charging_stations,
         'charging_station_distances': charging_station_distances,
     }
-
+    print("********** results strats here **********")
+    print(filtered_charging_stations)
+    print("********** results ends here **********")
     return render(request, 'home.html', context)
+
+
 
 
 
@@ -298,7 +321,7 @@ def user_settings(request):
             [request.user.id]
         )
         usercars_id_result = cursor.fetchone()
-
+        
     # Check if usercars_id_result is not None before using it
     if usercars_id_result is not None:
         usercars_id = usercars_id_result[0]
@@ -526,21 +549,25 @@ def get_addresses(request):
     return JsonResponse(list(addresses), safe=False)
 
 
-
 def get_info(request):
     address = request.GET.get('address')
-    try:
-        charging_station = ChargingStation.objects.get(address=address)
-        data = {
-            'charger': charging_station.charger,
+    
+    charging_stations = ChargingStation.objects.filter(address=address)
+    
+    if charging_stations.exists():
+        # If there are multiple charging stations, include information for all of them
+        data = [{
+            'charger': str(charging_station.charger),  # Convert Charger object to string
             'description': charging_station.description,
-        }
-        return JsonResponse(data)
-    except ChargingStation.DoesNotExist:
+        } for charging_station in charging_stations]
+        print(data)
+        return JsonResponse(data, safe=False)
+    else:
         return JsonResponse({'error': 'Charging station not found'}, status=404)
 
-from django.shortcuts import render
-from .models import Media  # Import your Medias model
+
+
+
 
 def display_logo(request):
     # Retrieve the image data by its name, assuming the name is 'ElectricPark logo'

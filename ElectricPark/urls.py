@@ -48,6 +48,6 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('update_max_walking_distance/', views.update_max_walking_distance, name='update_max_walking_distance'),
     path('delete_user_car/<int:car_id>/', views.delete_user_car, name='delete_user_car'),
-
+    path('get_info/', views.get_info, name='get_info'),
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
