@@ -1,3 +1,4 @@
 Django
 googlemaps
 geopy
+psycopg2-binary
