@@ -1,4 +1,4 @@
 Django
 googlemaps
 geopy
-psycopg2-binary
+psycopg2-binary==<>
