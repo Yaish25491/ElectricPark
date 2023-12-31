@@ -1,4 +1,3 @@
 Django
 googlemaps
 geopy
-psycopg2
