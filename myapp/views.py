@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.core.management.base import BaseCommand
 from django.http import HttpResponse, JsonResponse
 from django.db import connection, connections
+from django.core.exceptions import ValidationError
 
 def index(request):
     if request.user.is_authenticated:
@@ -146,6 +147,13 @@ def home(request):
                             distance_matrix = gmaps.distance_matrix(user_address, charging_station_address)['rows'][0]['elements'][0]
                             distance = distance_matrix['distance']['value'] if 'distance' in distance_matrix else 'N/A'
                             distance_text = distance_matrix['distance']['text'] if 'distance' in distance_matrix else 'N/A'
+
+                            # Custom validation for invalid address
+                            if distance == 'N/A':
+                                messages.error(request,"Invalid Address, please use a street, bulding number and a city combination. BTW Maymon Ha-Homo")
+                                context = {'form': form}
+                                return render(request, 'home.html', context)
+
                             # Step 7: Append charging station address and distance to the list
                             charging_station_distances.append({
                                 'id': charging_station_id,

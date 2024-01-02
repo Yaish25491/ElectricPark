@@ -25,7 +25,11 @@ SECRET_KEY = "django-insecure-_(u0it_$4=hwz8e-5ouly+wnu(dxfei3==w4b(+e^29rq-dc_r
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app']
+ALLOWED_HOSTS = ['127.0.0.1', '.vercel.app', '*',]
+
+CORS_ALLOWED_ORIGINS = [
+    "https://fa08-87-68-166-218.ngrok-free.app",
+]
 
 
 # Application definition
@@ -39,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "myapp",
     "members",
+    'corsheaders',
     ]
 
 MIDDLEWARE = [
@@ -49,6 +54,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
 
 ROOT_URLCONF = "ElectricPark.urls"
