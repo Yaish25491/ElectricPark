@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "myapp",
     "members",
     'corsheaders',
+    'crispy_forms',
     ]
 
 MIDDLEWARE = [
@@ -59,6 +60,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "ElectricPark.urls"
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 TEMPLATES = [
     {

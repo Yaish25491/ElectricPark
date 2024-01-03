@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 {% block content%}
+{% load crispy_forms_tags %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +9,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive Google Map</title>
   <style>
+    
     header {
       background-color: #333;
       color: #fff;
@@ -51,186 +54,187 @@
     padding: 10px 20px;
     text-align: center;
     }
-
+    
   </style>
-</head>
-<body>
-<header>
-    <h1>Hi {{user}} Find Your Next Charging Station</h1>
-</header>
+  </head>
+  <body>
+  <header>
+      <h1>Hi {{user}} Find Your Next Charging Station</h1>
+  </header>
 
 
-<div id="map" style="height: 400px;"></div>
+  <div id="map" style="height: 400px;"></div>
 
-<script>
-  async function getAddressesFromServer() {
-      try {
-          const response = await fetch('/get_addresses/');
-          const addresses = await response.json();
-          return addresses;
-      } catch (error) {
-          console.error('Error fetching addresses:', error);
-      }
+  <script>
+    async function getAddressesFromServer() {
+        try {
+            const response = await fetch('/get_addresses/');
+            const addresses = await response.json();
+            return addresses;
+        } catch (error) {
+            console.error('Error fetching addresses:', error);
+        }
+    }
+
+    let map;
+    let markers = [];
+
+    async function initMap() {
+      const addresses = await getAddressesFromServer();
+      const geocoder = new google.maps.Geocoder();
+      map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 8,
+          center: { lat: 32, lng: 34 },
+      });
+
+      addresses.forEach(async address => {
+          geocoder.geocode({ address }, async (results, status) => {
+              if (status === 'OK') {
+                  const marker = new google.maps.Marker({
+                      map,
+                      position: results[0].geometry.location,
+                  });
+
+                  const infoWindow = new google.maps.InfoWindow();
+                  await fetch(`/get_info/?address=${encodeURIComponent(address)}`)
+                      .then(response => response.json())
+                      .then(data => {
+                          infoWindow.setContent(`
+                              <h3>${address}</h3>
+                              <p>Charger: ${data.charger}</p>
+                              <p>Description: ${data.description}</p>
+                          `);
+                      })
+                      .catch(error => {
+                          console.error('Error fetching info:', error);
+                      });
+
+                  marker.addListener('click', () => {
+                      infoWindow.open(map, marker);
+                  });
+
+                  markers.push(marker);
+              } else {
+                  console.error('Geocode was not successful for the following reason:', status);
+              }
+          });
+      });
   }
 
-  let map;
-  let markers = [];
 
-  async function initMap() {
-    const addresses = await getAddressesFromServer();
+  async function searchAddress() {
+    const searchInput = document.getElementById('searchInput').value;
     const geocoder = new google.maps.Geocoder();
-    map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 8,
-        center: { lat: 32, lng: 34 },
-    });
 
-    addresses.forEach(async address => {
-        geocoder.geocode({ address }, async (results, status) => {
-            if (status === 'OK') {
-                const marker = new google.maps.Marker({
-                    map,
-                    position: results[0].geometry.location,
-                });
+    geocoder.geocode({ address: searchInput }, async (results, status) => {
+      if (status === 'OK') {
+        const userLocation = results[0].geometry.location;
 
-                const infoWindow = new google.maps.InfoWindow();
-                await fetch(`/get_info/?address=${encodeURIComponent(address)}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        infoWindow.setContent(`
-                            <h3>${address}</h3>
-                            <p>Charger: ${data.charger}</p>
-                            <p>Description: ${data.description}</p>
-                        `);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching info:', error);
-                    });
-
-                marker.addListener('click', () => {
-                    infoWindow.open(map, marker);
-                });
-
-                markers.push(marker);
-            } else {
-                console.error('Geocode was not successful for the following reason:', status);
-            }
+        // Calculate distances and sort charging stations by distance
+        const chargingStationsWithDistance = markers.map(marker => {
+          const stationLocation = marker.getPosition();
+          const distance = google.maps.geometry.spherical.computeDistanceBetween(
+            userLocation,
+            stationLocation
+          );
+          return { marker, distance };
         });
-    });
-}
 
+        chargingStationsWithDistance.sort((a, b) => a.distance - b.distance);
 
-async function searchAddress() {
-  const searchInput = document.getElementById('searchInput').value;
-  const geocoder = new google.maps.Geocoder();
+        // Display the three closest charging stations
+        const closestStations = chargingStationsWithDistance.slice(0, 3);
 
-  geocoder.geocode({ address: searchInput }, async (results, status) => {
-    if (status === 'OK') {
-      const userLocation = results[0].geometry.location;
-
-      // Calculate distances and sort charging stations by distance
-      const chargingStationsWithDistance = markers.map(marker => {
-        const stationLocation = marker.getPosition();
-        const distance = google.maps.geometry.spherical.computeDistanceBetween(
-          userLocation,
-          stationLocation
+        const closestChargingStationsList = document.getElementById(
+          'closest-charging-stations'
         );
-        return { marker, distance };
-      });
+        closestChargingStationsList.innerHTML = '';
 
-      chargingStationsWithDistance.sort((a, b) => a.distance - b.distance);
+        closestStations.forEach(station => {
+          const address = station.marker.getTitle();
+          const distanceInKm = (station.distance / 1000).toFixed(2);
+          const listItem = document.createElement('li');
+          listItem.innerHTML = `<strong>${address}</strong> (Distance: ${distanceInKm} km)`;
+          closestChargingStationsList.appendChild(listItem);
+        });
+      } else {
+        console.error('Geocode was not successful for the following reason:', status);
+      }
+    });
+  }
 
-      // Display the three closest charging stations
-      const closestStations = chargingStationsWithDistance.slice(0, 3);
+  </script>
+  <hr>
+  <script>
+    initMap();
+  </script>
 
-      const closestChargingStationsList = document.getElementById(
-        'closest-charging-stations'
-      );
-      closestChargingStationsList.innerHTML = '';
+    <!-- Add the Google Maps API script here (replace "YOUR_API_KEY" with your actual API key) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBlESR_sT43qVHo5P3Jquk9SuHsZwpL6Q&callback=initMap" async defer></script>
 
-      closestStations.forEach(station => {
-        const address = station.marker.getTitle();
-        const distanceInKm = (station.distance / 1000).toFixed(2);
-        const listItem = document.createElement('li');
-        listItem.innerHTML = `<strong>${address}</strong> (Distance: ${distanceInKm} km)`;
-        closestChargingStationsList.appendChild(listItem);
-      });
-    } else {
-      console.error('Geocode was not successful for the following reason:', status);
-    }
-  });
-}
-
-</script>
-<hr>
-<script>
-  initMap();
-</script>
-
-  <!-- Add the Google Maps API script here (replace "YOUR_API_KEY" with your actual API key) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCBlESR_sT43qVHo5P3Jquk9SuHsZwpL6Q&callback=initMap" async defer></script>
-
+      
+    <div id="charging-stations-list">
     
-  <div id="charging-stations-list">
-  
-    <ul id="closest-charging-stations">
-      <!-- Results will be displayed here -->
-    </ul>
+      <ul id="closest-charging-stations">
+        <!-- Results will be displayed here -->
+      </ul>
+    </div>
+    
+    <div class="mb-3">
+      <#search-bar>
+      <h1>Search For A Charging Station</h1>
+      </#search-bar >
+      <form method="post" class="form-control">
+        {% csrf_token %}
+        <div class="form-group">
+          {{ car_form.as_p }}
+        </div>
+        <div class="form-group">
+          {{ form.as_p }}
+        </div>
+        <button type="submit" class="btn btn-primary">Search Charging Stations</button>
+      </form>
+    </div>
+    
+    
+    <div class="card">
+        <div class="card-body">
+            <h3>Charging Stations</h3>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Charging Station</th>
+                  <th>Distance</th>
+                  <th>max</th>
+                  <th>Navigation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in charging_stations %}
+                <tr>
+                    <td>{{ item.address }}</td>
+                    <td>{{ item.distance_text }}</td>
+                    <td>{{ item.max }}</td>
+                    <td>
+                        <form action="https://www.google.com/maps" method="get" target="_blank">
+                            <input type="hidden" name="q" value="{{ item.address }}">
+                            <button type="submit" class="btn btn-success">Navigate</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            </table>
+        </div>
+    </div>
   </div>
 
-  <div class="mb-3">
-    <h1 class="form-label">Search For A Charging Station</h1>
-  
-    <form method="post" class="form-control">
-      {% csrf_token %}
-      <div class="form-group">
-        {{ car_form.as_p }}
-      </div>
-      <div class="form-group">
-        {{ form.as_p }}
-      </div>
-      <button type="submit" class="btn btn-primary">Search Charging Stations</button>
-    </form>
+
+
+
   </div>
-  
-  
-  <div class="card">
-      <div class="card-body">
-          <h3>Charging Stations</h3>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Charging Station</th>
-                <th>Distance</th>
-                <th>max</th>
-                <th>Navigation</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in charging_stations %}
-              <tr>
-                  <td>{{ item.address }}</td>
-                  <td>{{ item.distance_text }}</td>
-                  <td>{{ item.max }}</td>
-                  <td>
-                      <form action="https://www.google.com/maps" method="get" target="_blank">
-                          <input type="hidden" name="q" value="{{ item.address }}">
-                          <button type="submit" class="btn btn-success">Navigate</button>
-                      </form>
-                  </td>
-              </tr>
-              {% endfor %}
-          </tbody>
-          </table>
-      </div>
-  </div>
-</div>
 
 
-
-
-</div>
-
-
-</body>
+  </body>
 </html>
 {% endblock %}
