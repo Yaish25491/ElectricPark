@@ -219,7 +219,8 @@ class ChargingStationSearchForm(forms.Form):
     address = forms.CharField(label='Address', max_length=100)
     car = forms.ModelChoiceField(
         queryset=None,
-        empty_label='Select a car')
+        empty_label='Select your car',
+        label='')
 
     def __init__(self, user, *args, **kwargs):
         super(ChargingStationSearchForm, self).__init__(*args, **kwargs)

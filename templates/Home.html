@@ -15,6 +15,7 @@
       color: #fff;
       padding: 10px;
     }
+    
     h1 {
       margin: 0;
     }
@@ -48,13 +49,18 @@
     .iframe-container {
             display: none;
         }
-    header {
-    background-color: #333;
+    .secondary-header{
+    background-color: #333333;
     color: #fff;
-    padding: 10px 20px;
+    padding: 0px 20px;
     text-align: center;
+    font-size: 10px;
     }
-    
+    .form-control input {
+       width: 26.5%;
+       text-align: center; 
+    }
+       
   </style>
   </head>
   <body>
@@ -181,20 +187,24 @@
     </div>
     
     <div class="mb-3">
-      <#search-bar>
-      <h1>Search For A Charging Station</h1>
-      </#search-bar >
-      <form method="post" class="form-control">
-        {% csrf_token %}
-        <div class="form-group">
-          {{ car_form.as_p }}
-        </div>
-        <div class="form-group">
-          {{ form.as_p }}
-        </div>
-        <button type="submit" class="btn btn-primary">Search Charging Stations</button>
-      </form>
+      <div class="secondary-header">
+        <h1>Search For A Charging Station</h1>
     </div>
+        
+      <div>
+        <form method="post" class="form-control">
+          {% csrf_token %}
+          <div class="form-group">
+            {{ car_form.as_p }}
+          </div>
+          <div class="form-group">
+            {{ form.as_p }}
+          </div>
+          <button type="submit" class="btn btn-primary">Search Charging Stations</button>
+        </form>
+      </div>
+        
+      </form>
     
     
     <div class="card">

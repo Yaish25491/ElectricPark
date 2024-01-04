@@ -150,7 +150,7 @@ def home(request):
 
                             # Custom validation for invalid address
                             if distance == 'N/A':
-                                messages.error(request,"Invalid Address, please use a street, building number and a city combination. BTW Maymon Ha-Homo")
+                                messages.error(request,"Invalid Address, please use a street, building number and a city combination")
                                 context = {'form': form}
                                 return render(request, 'home.html', context)
 
