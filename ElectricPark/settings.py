@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "members",
     'corsheaders',
     'crispy_forms',
+    'django_extensions'
     ]
 
 MIDDLEWARE = [

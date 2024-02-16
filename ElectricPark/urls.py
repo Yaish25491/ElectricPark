@@ -49,5 +49,9 @@ urlpatterns = [
     path('update_max_walking_distance/', views.update_max_walking_distance, name='update_max_walking_distance'),
     path('delete_user_car/<int:car_id>/', views.delete_user_car, name='delete_user_car'),
     path('get_info/', views.get_info, name='get_info'),
+    path('schedule/<int:station_id>/', schedule_station, name='schedule_station'),
+    path('process_schedule/<int:station_id>/', process_schedule, name='process_schedule'),
+    path('login/manage_schedule/<int:station_id>/', manage_schedule, name='manage_schedule'),
+
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

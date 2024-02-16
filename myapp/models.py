@@ -48,17 +48,16 @@ class ChargingStation(models.Model):
     station_status = models.CharField('station status', max_length=100, choices=[('Used', 'Used'), ('Available', 'Available'), ('Off', 'Off')], default='Available')
 
     def __str__(self):
-        return f'{self.user} {self.address} {self.charger}'
+        return f'{self.id} {self.user} {self.address} {self.charger}'
     
-class ChargingSchedule(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+class ChargingStationSchedule(models.Model):
     charging_station = models.ForeignKey(ChargingStation, on_delete=models.CASCADE)
-    scheduled_start_time = models.TimeField()
-    scheduled_end_time = models.TimeField()
-
-    def __str__(self):
-        return f'{self.user} {self.charging_station} {self.scheduled_start_time} to {self.scheduled_end_time}'
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    scheduled_time_start = models.DateTimeField()
+    scheduled_time_finish = models.DateTimeField()
     
+def __str__(self):
+        return f'{self.id} {self.user} {self.charging_station} {self.scheduled_time_start} {self.scheduled_time_finish}'
 
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)    

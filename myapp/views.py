@@ -14,6 +14,7 @@ from django.core.management.base import BaseCommand
 from django.http import HttpResponse, JsonResponse
 from django.db import connection, connections
 from django.core.exceptions import ValidationError
+from operator import itemgetter
 
 def index(request):
     if request.user.is_authenticated:
@@ -196,6 +197,20 @@ def home(request):
         print(charging_station_distances_numeric)
         print("********** results ends here **********")
         # Step 9: Filter charging stations based on max_walking_distance
+        charging_station_distances_numeric = [
+            {
+                'id': station['id'],
+                'address': station['address'],
+                'distance': f"{station['distance']} m",  # Assuming distance is in meters
+                'distance_text': station['distance_text'],
+            }
+            for station in charging_station_distances
+        ]
+
+        # Step 9.1: Sort charging stations by distance
+        charging_station_distances_numeric.sort(key=lambda x: float(x['distance'].split(' ')[0]))
+
+        # Step 9.2: Filter charging stations based on max_walking_distance
         filtered_charging_stations = [
             {
                 'id': station['id'],
@@ -207,12 +222,31 @@ def home(request):
             for station in charging_station_distances_numeric
             if float(station['distance'].split(' ')[0]) <= max_walking_distance
         ]
+    
 
         # Step 10: Print the difference for each filtered charging station
         for station in filtered_charging_stations:
             distance_numeric = float(station['distance'].split(' ')[0])
             difference = distance_numeric - max_walking_distance
             print(f"Distance: {distance_numeric} m, Max Walking Distance: {max_walking_distance} m, Difference: {difference} m")
+
+        # Step 11: Check if results are empty and show error message
+        if not filtered_charging_stations:
+            messages.error(request, "There are no Charging Stations in the erea you searched, Please update your max walking distance to get results")
+        else:
+                # Step 12: Add messages based on the number of results
+                num_results = len(filtered_charging_stations)
+                if 1 <= num_results <= 5:
+                    messages.success(request, f"Your search returned with {num_results} result{'s' if num_results > 1 else ''}.")
+                elif num_results > 5:
+                    messages.success(request, f"Your search returned with {num_results} results. Here are the top 5.")
+
+        
+        #step 13: filter list to be top 5 results
+        filtered_charging_stations = filtered_charging_stations[:5]
+    
+    else:
+        form = ChargingStationSearchForm(user=request.user)
 
     context = {
         'form': form,
@@ -225,8 +259,17 @@ def home(request):
     return render(request, 'Home.html', context)
 
 
+def schedule_station(request, station_id):
+    charging_station = ChargingStation.objects.get(id=station_id)
+    # Add logic to get available time windows for scheduling
+    return render(request, 'schedule_station.html', {'charging_station': charging_station, 'available_time_windows': available_time_windows})
 
-
+def process_schedule(request, station_id):
+    if request.method == 'POST':
+        # Add logic to handle the form submission and schedule the time window
+        # Make sure to check if the selected time window is available
+        # Update the ChargingStationSchedule table accordingly
+        return redirect('home')
 
 
 def new_user(request):
@@ -669,3 +712,153 @@ def distance_calculation(request):
 
     # Step 8: Return the list of charging station addresses and distances
     return charging_station_distances
+
+def schedule_station(request, station_id):
+    charging_station = ChargingStation.objects.get(id=station_id)
+    available_time_windows = get_available_time_windows(charging_station)
+
+    if request.method == 'POST':
+        form = ChargingStationScheduleForm(request.POST)
+        if form.is_valid():
+            scheduled_time_start = form.cleaned_data['scheduled_time_start']
+            scheduled_time_finish = form.cleaned_data['scheduled_time_finish']
+
+            if is_time_window_available(charging_station, scheduled_time_start, scheduled_time_finish):
+                ChargingStationSchedule.objects.create(
+                    charging_station=charging_station,
+                    user=request.user,
+                    scheduled_time_start=scheduled_time_start,
+                    scheduled_time_finish=scheduled_time_finish
+                )
+                messages.success(request, 'Charging station scheduled successfully.')
+                return redirect('home')
+            else:
+                messages.error(request, 'Selected time window is not available.')
+    else:
+        form = ChargingStationScheduleForm()
+
+    return render(request, 'schedule_station.html', {'charging_station': charging_station, 'available_time_windows': available_time_windows, 'form': form})
+
+def is_time_window_available(charging_station, start_time, finish_time):
+    # Your existing logic to check if the time window is available
+    # ...
+
+    # Assuming you have a method to get existing schedules for the charging station
+    existing_schedules = ChargingStationSchedule.objects.filter(
+        charging_station=charging_station,
+        scheduled_time_finish__gt=timezone.now()  # Filter out past schedules
+    )
+
+    # Check if the new time window overlaps with existing schedules
+    for schedule in existing_schedules:
+        if start_time < schedule.scheduled_time_finish and finish_time > schedule.scheduled_time_start:
+            return False  # Overlapping time window found
+
+    return True
+
+def process_schedule(request, station_id):
+    if request.method == 'POST':
+        form = ChargingStationScheduleForm(request.POST)
+        if form.is_valid():
+            start_time = form.cleaned_data['scheduled_time_start']
+            finish_time = form.cleaned_data['scheduled_time_finish']
+
+            charging_station = ChargingStation.objects.get(id=station_id)
+
+            # Check if the selected time window is available
+            if is_time_window_available(charging_station, start_time, finish_time):
+                # Schedule the time window
+                ChargingStationSchedule.objects.create(
+                    charging_station=charging_station,
+                    user=request.user,
+                    scheduled_time_start=start_time,
+                    scheduled_time_finish=finish_time
+                )
+                messages.success(request, 'Charging station scheduled successfully!')
+                return redirect('home')
+            else:
+                messages.error(request, 'Selected time window is not available. Please choose another time.')
+    else:
+        form = ChargingStationScheduleForm()
+
+    charging_station = ChargingStation.objects.get(id=station_id)
+    available_time_windows = get_available_time_windows(charging_station)
+
+    context = {
+        'form': form,
+        'charging_station': charging_station,
+        'available_time_windows': available_time_windows,
+    }
+
+    return render(request, 'schedule_station.html', context)
+
+def get_available_time_windows(charging_station):
+    working_hours_start = charging_station.working_hours_start
+    working_hours_finish = charging_station.working_hours_finish
+
+    existing_schedules = ChargingStationSchedule.objects.filter(
+        charging_station=charging_station,
+        scheduled_time_finish__gt=timezone.now()
+    )
+
+    # Your logic to determine available time windows based on working hours and existing schedules
+    # For simplicity, let's assume available time windows are every 30 minutes within working hours
+
+    available_time_windows = []
+    current_time = working_hours_start
+
+    while current_time < working_hours_finish:
+        end_time = current_time + timezone.timedelta(minutes=30)
+
+        # Check if the time window overlaps with existing schedules
+        overlap = any(
+            schedule.scheduled_time_start < end_time and schedule.scheduled_time_finish > current_time
+            for schedule in existing_schedules
+        )
+
+        if not overlap:
+            available_time_windows.append((current_time, end_time))
+
+        current_time = end_time
+
+    return available_time_windows
+
+def manage_schedule(request, station_id):
+    charging_station = ChargingStation.objects.get(id=station_id)
+    schedule_form = ChargingStationScheduleForm()
+
+    if request.method == 'POST':
+        schedule_form = ChargingStationScheduleForm(request.POST)
+        if schedule_form.is_valid():
+            scheduled_time_start = schedule_form.cleaned_data['scheduled_time_start']
+            scheduled_time_finish = schedule_form.cleaned_data['scheduled_time_finish']
+
+            # Check if the selected time window is available
+            if is_time_window_available(charging_station, scheduled_time_start, scheduled_time_finish):
+                # Create a new schedule entry
+                ChargingStationSchedule.objects.create(
+                    charging_station=charging_station,
+                    user=request.user,
+                    scheduled_time_start=scheduled_time_start,
+                    scheduled_time_finish=scheduled_time_finish
+                )
+
+                # You can customize the success message
+                messages.success(request, 'Charging station scheduled successfully.')
+
+                # Redirect to the home page or any other appropriate page
+                return redirect('home')
+            else:
+                messages.error(request, 'Selected time window is not available.')
+
+    # Retrieve existing schedules for the charging station
+    existing_schedules = ChargingStationSchedule.objects.filter(charging_station=charging_station)
+
+    # Pass the charging station, existing schedules, and the form to the template
+    context = {
+        'charging_station': charging_station,
+        'existing_schedules': existing_schedules,
+        'schedule_form': schedule_form,
+    }
+
+    return render(request, 'manage_schedule.html', context)

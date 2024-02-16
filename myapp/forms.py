@@ -229,3 +229,25 @@ class ChargingStationSearchForm(forms.Form):
 
 class DeleteCarForm(forms.Form):
     car_id = forms.IntegerField(widget=forms.HiddenInput())
+
+
+class ChargingStationScheduleForm(forms.Form):
+    scheduled_time_start = forms.DateTimeField(
+        label='Start Time',
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+    )
+    scheduled_time_finish = forms.DateTimeField(
+        label='Finish Time',
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get('scheduled_time_start')
+        finish_time = cleaned_data.get('scheduled_time_finish')
+
+        if start_time and finish_time and start_time >= finish_time:
+            raise forms.ValidationError('Finish time must be later than start time.')
+        
+class UpdateMaxWalkingDistanceForm(forms.Form):
+    max_walking_distance = forms.FloatField(label='New Max Walking Distance', required=True)   
