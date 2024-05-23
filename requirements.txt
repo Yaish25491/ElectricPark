@@ -1,5 +1,7 @@
 Django
 googlemaps
 geopy
-psycopg2-binary==<>
+#psycopg2-binary==<>
 django-crispy-forms
+django_extensions
+pillow
