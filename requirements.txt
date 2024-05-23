@@ -5,3 +5,4 @@ geopy
 django-crispy-forms
 django_extensions
 pillow
+django-cors-headers
