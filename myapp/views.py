@@ -15,6 +15,10 @@ from django.http import HttpResponse, JsonResponse
 from django.db import connection, connections
 from django.core.exceptions import ValidationError
 from operator import itemgetter
+from django.utils import timezone
+from datetime import datetime, timedelta, time
+
+
 
 def index(request):
     if request.user.is_authenticated:
@@ -739,6 +743,7 @@ def schedule_station(request, station_id):
 
     return render(request, 'schedule_station.html', {'charging_station': charging_station, 'available_time_windows': available_time_windows, 'form': form})
 
+
 def is_time_window_available(charging_station, start_time, finish_time):
     # Your existing logic to check if the time window is available
     # ...
@@ -862,3 +867,173 @@ def manage_schedule(request, station_id):
     }
 
     return render(request, 'manage_schedule.html', context)
+
+from django.shortcuts import render, get_object_or_404
+from .models import ChargingStation
+from datetime import datetime, timedelta
+
+def weekly_calendar(request, station_id):
+    charging_station = get_object_or_404(ChargingStation, id=station_id)
+    
+    # Prepare the weekly calendar with 30-minute slots
+    calendar = []
+    start_time = charging_station.working_hours_start
+    end_time = charging_station.working_hours_finish
+    
+    for day in range(7):
+        slots = []
+        current_time = datetime.combine(datetime.today(), start_time)
+        end_time_today = datetime.combine(datetime.today(), end_time)
+        while current_time < end_time_today:
+            slots.append(current_time.time())
+            current_time += timedelta(minutes=30)
+        calendar.append(slots)
+    
+    context = {
+        'charging_station': charging_station,
+        'calendar': calendar,
+    }
+    
+    return render(request, 'weekly_calendar.html', context)
+
+from django.shortcuts import render
+from datetime import time, timedelta, datetime
+from .models import ChargingStation
+
+def generate_time_slots(start, end, slot_duration):
+    slots = []
+    current = start
+    while current <= end:
+        slots.append(current)
+        current = (datetime.combine(datetime.today(), current) + slot_duration).time()
+    return slots
+
+def show_weekly_calendar(request, station_id):
+    charging_station = ChargingStation.objects.get(id=station_id)
+    
+    # Generate 30-minute time slots for a full 24 hours
+    start_time = time(0, 0)
+    end_time = time(23, 30)  # Ensure the last slot is included
+    slot_duration = timedelta(minutes=30)
+    time_slots = generate_time_slots(start_time, end_time, slot_duration)
+    
+    # Get working hours from the charging station object
+    working_hours_start = charging_station.working_hours_start
+    working_hours_finish = charging_station.working_hours_finish
+
+    calendar = []
+    for day in ['sunday', 'monday', 'tuesday', ' wednesday', 'thursday', 'friday', 'saturday']:
+        day_slots = []
+        for slot in time_slots:
+            # Check if the slot falls within working hours for the current day
+            if working_hours_start <= slot <= working_hours_finish:
+                day_slots.append(slot)
+        calendar.append(day_slots)
+    
+    context = {
+        'charging_station': charging_station,
+        'calendar': calendar,
+        'time_slots': time_slots,
+    }
+    
+    return render(request, 'weekly_calendar.html', context)
+
+# views.py
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .models import ChargingStation, ChargingStationOrder
+from .forms import ChargingStationOrderForm
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+
+@login_required
+
+
+
+def schedule_station(request, station_id):
+    station = get_object_or_404(ChargingStation, pk=station_id)
+
+    if request.method == 'POST':
+        form = ChargingStationOrderForm(request.POST)
+        if form.is_valid():
+            form.instance.user = request.user
+            form.instance.charging_station = station
+            form.save()
+            return HttpResponse("Order created successfully")
+    else:
+        form = ChargingStationOrderForm(initial={'charging_station': station})
+    print("*** printing form ****")
+    print(form)
+    print("*** printing Stration ****")
+    print(station)
+    return render(request, 'schedule_station.html', {'form': form, 'station': station})
+
+
+
+
+
+"""
+def schedule_station(request, station_id):
+    station = ChargingStation.objects.get(pk=station_id)
+    
+    if request.method == 'POST':
+        form = ChargingStationOrderForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.charging_station = station
+            order.user = request.user
+            try:
+                order.clean()
+                order.save()
+                messages.success(request, "Charging slot booked successfully!")
+                return redirect('charging_stations_list')
+            except ValidationError as e:
+                messages.error(request, str(e))
+    else:
+        form = ChargingStationOrderForm()
+
+    context = {
+        'station': station,
+        'form': form,
+    }
+    return render(request, 'schedule_station.html', context)
+
+
+def get_available_times(station, order_date):
+    available_hours = []
+    start_time = station.working_hours_start
+    end_time = station.working_hours_finish
+
+    # Create a list of potential time slots throughout the working hours
+    current_time = start_time
+    while current_time < end_time:
+        next_time = (datetime.combine(datetime.today(), current_time) + timedelta(minutes=30)).time()
+        available_hours.append({
+            'start': current_time.strftime('%H:%M'),
+            'end': next_time.strftime('%H:%M')
+        })
+        current_time = next_time
+
+    # Filter out booked time slots based on existing orders
+    existing_orders = ChargingStationOrder.objects.filter(
+        charging_station=station, order_date=order_date
+    )
+    booked_times = [(order.order_start.time(), order.order_finish.time()) for order in existing_orders]
+
+    filtered_hours = []
+    for hour in available_hours:
+        start_time = datetime.strptime(hour['start'], '%H:%M').time()
+        end_time = datetime.strptime(hour['end'], '%H:%M').time()
+        if not any(conflict_start <= start_time < conflict_end or conflict_start < end_time <= conflict_end for conflict_start, conflict_end in booked_times):
+            filtered_hours.append(hour)
+
+    return filtered_hours
+
+"""
+
+
+
+
+
+
+        

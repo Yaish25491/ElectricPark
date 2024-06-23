@@ -5,6 +5,8 @@ from .models import *
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.db import connections, connection
+from bootstrap_datepicker_plus.widgets import DatePickerInput
+from datetime import time
 
 
 
@@ -231,15 +233,36 @@ class DeleteCarForm(forms.Form):
     car_id = forms.IntegerField(widget=forms.HiddenInput())
 
 
+from django import forms
+from datetime import datetime, timedelta
+
 class ChargingStationScheduleForm(forms.Form):
-    scheduled_time_start = forms.DateTimeField(
+    def __init__(self, *args, **kwargs):
+        super(ChargingStationScheduleForm, self).__init__(*args, **kwargs)
+        
+        # Calculate the time slots for the next 24 hours in 30-minute intervals
+        start_time = datetime.now()
+        end_time = start_time + timedelta(days=1)
+        time_slots = [(start_time + timedelta(minutes=30 * i), start_time + timedelta(minutes=30 * (i + 1))) 
+                      for i in range(int(((end_time - start_time).seconds) / 1800))]
+        
+        # Create choices for the time slots
+        choices = [(slot[0], f"{slot[0].strftime('%Y-%m-%dT%H:%M')} - {slot[1].strftime('%Y-%m-%dT%H:%M')}") 
+                   for slot in time_slots]
+        
+        # Set choices for the start and finish time fields
+        self.fields['scheduled_time_start'].widget.choices = choices
+        self.fields['scheduled_time_finish'].widget.choices = choices
+
+    scheduled_time_start = forms.ChoiceField(
         label='Start Time',
-        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        widget=forms.Select(),
     )
-    scheduled_time_finish = forms.DateTimeField(
+    scheduled_time_finish = forms.ChoiceField(
         label='Finish Time',
-        widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'),
+        widget=forms.Select(),
     )
+
 
     def clean(self):
         cleaned_data = super().clean()
@@ -251,3 +274,70 @@ class ChargingStationScheduleForm(forms.Form):
         
 class UpdateMaxWalkingDistanceForm(forms.Form):
     max_walking_distance = forms.FloatField(label='New Max Walking Distance', required=True)   
+
+
+from django import forms
+from .models import ChargingStationOrder
+
+class ChargingStationOrderForm(forms.ModelForm):
+    order_date = forms.DateTimeField(
+        widget=forms.DateInput(
+            attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+        initial='1991-04-25'  # or any other default date
+    )
+    
+    order_start = forms.DateTimeField(
+        widget=forms.TimeInput(
+            attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+        initial='06:00'
+    )
+    
+    order_finish = forms.DateTimeField(
+        widget=forms.TimeInput(
+            attrs={
+                'class': 'form-control',
+                'type': 'time'
+            }),
+        initial='18:00'
+    )
+
+    class Meta:
+        model = ChargingStationOrder
+        fields = ['charging_station', 'order_date', 'order_start', 'order_finish']
+        widgets = {
+            'charging_station': forms.HiddenInput()
+        }
+
+
+
+
+"""
+class ChargingStationOrderForm(forms.ModelForm):
+    class Meta:
+        model = ChargingStationOrder
+        fields = ['charging_station', 'order_date', 'order_start', 'order_finish']
+        widgets = {
+            'order_date': DatePickerInput(),  # DatePickerInput for date field
+            'order_start': TimePickerInput(options={"showMeridian": True}),  # TimePickerInput for time fields
+            'order_finish': TimePickerInput(options={"showMeridian": False}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['order_start'].widget.attrs.update({'class': 'form-control datetimepicker-input'})
+        self.fields['order_finish'].widget.attrs.update({'class': 'form-control datetimepicker-input'})
+        self.fields['order_start'].input_formats = ['%I:%M %p', '%H:%M']
+        self.fields['order_finish'].input_formats = ['%I:%M %p', '%H:%M']
+"""
+
+
+
+
+        
+

@@ -4,6 +4,8 @@ from .models import *
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib import admin
+from datetime import datetime, timedelta, time
+from django.core.exceptions import ValidationError
 
 
 class Item(models.Model):
@@ -59,6 +61,32 @@ class ChargingStationSchedule(models.Model):
 def __str__(self):
         return f'{self.id} {self.user} {self.charging_station} {self.scheduled_time_start} {self.scheduled_time_finish}'
 
+class ChargingStationOrder(models.Model):
+    charging_station = models.ForeignKey(ChargingStation, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    order_date = models.DateField(null=True)
+    order_start = models.DateTimeField()
+    order_finish = models.DateTimeField()
+
+    def __str__(self):
+        return f'{self.id} - {self.user} - {self.charging_station.address} - {self.order_date} ({self.order_start} - {self.order_finish})'
+"""
+    def clean(self):
+        # Check if order is within working hours
+        if self.order_start.time() < self.charging_station.working_hours_start or self.order_finish.time() > self.charging_station.working_hours_finish:
+            raise ValidationError("Order time falls outside station's working hours.")
+
+        # Check for conflicts with existing orders (implement later)
+        #existing_orders = ChargingStationOrder.objects.filter(
+        #    charging_station=self.charging_station, order_date=self.order_date, ...
+        # )
+        #if existing_orders.exists():
+        #     raise ValidationError("Selected time conflicts with another order.")
+        pass
+
+        # Call clean() method of superclass for further validation
+        super().clean()
+"""
 class Profile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)    
     charging_stations = models.ManyToManyField(ChargingStation, blank=True)

@@ -52,6 +52,8 @@ urlpatterns = [
     path('schedule/<int:station_id>/', schedule_station, name='schedule_station'),
     path('process_schedule/<int:station_id>/', process_schedule, name='process_schedule'),
     path('login/manage_schedule/<int:station_id>/', manage_schedule, name='manage_schedule'),
+    path('login/calendar/<int:station_id>/', views.weekly_calendar, name='weekly_calendar'),
+    #path('available-times/<int:station_id>/<str:order_date>/', views.get_available_times, name='get_available_times'),
 
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
