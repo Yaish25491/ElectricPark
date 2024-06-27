@@ -24,8 +24,8 @@ def index(request):
     if request.user.is_authenticated:
         return redirect('login/home')
     else:   
-        date = datetime.datetime.now()
-        return render(request, "index.html", {"date": date})
+        
+        return render(request, "index.html")
 
 def landing_page(request):
     return render(request, "LandingPage.html", {})
@@ -938,35 +938,91 @@ def show_weekly_calendar(request, station_id):
     
     return render(request, 'weekly_calendar.html', context)
 
+
 # views.py
+
 from django.shortcuts import render, redirect
-from django.contrib import messages
-from .models import ChargingStation, ChargingStationOrder
-from .forms import ChargingStationOrderForm
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from .forms import ChargingStationOrderForm
+from .models import ChargingStationOrder
 
 @login_required
-
-
-
 def schedule_station(request, station_id):
-    station = get_object_or_404(ChargingStation, pk=station_id)
+    # Fetch the station details using raw SQL
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, address
+            FROM myapp_chargingstation
+            WHERE id = %s
+            """,
+            [station_id]
+        )
+        station = cursor.fetchone()
 
+    if not station:
+        # Return a 404 error if the station is not found
+        return HttpResponse(status=404)
+
+    station_id, station_address = station
+
+    if request.method == 'POST':
+        form = ChargingStationOrderForm(request.POST, user_instance=request.user)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.charging_station_id = station_id
+            order.user = request.user  # Assign the user instance directly
+            order.save()
+            return redirect('home')  # Replace with your success URL
+    else:
+        initial_data = {
+            'charging_station': station_id,
+            'user': request.user  # Assign the user instance directly
+        }
+        form = ChargingStationOrderForm(initial=initial_data, user_instance=request.user)
+
+
+    print("*** POST Data ***")
+    print(request.POST)
+    print("*** Form is not valid ***")
+    print(form.errors)
+    print("*** printing form ****")
+    print(form)
+    print("*** printing Station ****")
+    print(station)
+    print("*** printing Station ID ****")
+    print(station_id)
+    print("*** printing Current time and date ****")
+    print(timezone.now().time(), timezone.now().date())
+
+    return render(request, 'schedule_station.html', {'form': form, 'station': station})
+
+
+
+
+# views.py
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required  # Ensure the user is logged in
+from .forms import ChargingStationOrderForm
+from .models import ChargingStationOrder
+
+@login_required
+def create_order(request, station_id):
     if request.method == 'POST':
         form = ChargingStationOrderForm(request.POST)
         if form.is_valid():
-            form.instance.user = request.user
-            form.instance.charging_station = station
-            form.save()
-            return HttpResponse("Order created successfully")
+            # Save the form data to the database
+            order = form.save(commit=False)
+            order.charging_station_id = station_id  # Assign the station_id from URL
+            order.user_id = request.user.id  # Assign the ordering user's ID
+            order.save()
+            return redirect('login/home/')  # Replace with your success URL
+            
     else:
-        form = ChargingStationOrderForm(initial={'charging_station': station})
-    print("*** printing form ****")
-    print(form)
-    print("*** printing Stration ****")
-    print(station)
-    return render(request, 'schedule_station.html', {'form': form, 'station': station})
+        form = ChargingStationOrderForm(initial={'user': request.user.id})  # Initialize user field
+
+    return render(request, 'schedule_station.html', {'form': form})
 
 
 

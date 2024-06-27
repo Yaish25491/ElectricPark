@@ -63,11 +63,11 @@ def __str__(self):
 
 class ChargingStationOrder(models.Model):
     charging_station = models.ForeignKey(ChargingStation, on_delete=models.CASCADE)
+    order_date = models.DateField()
+    order_start = models.TimeField()
+    order_finish = models.TimeField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    order_date = models.DateField(null=True)
-    order_start = models.DateTimeField()
-    order_finish = models.DateTimeField()
-
+    
     def __str__(self):
         return f'{self.id} - {self.user} - {self.charging_station.address} - {self.order_date} ({self.order_start} - {self.order_finish})'
 """
