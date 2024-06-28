@@ -279,39 +279,31 @@ class UpdateMaxWalkingDistanceForm(forms.Form):
 
 # forms.py
 from django import forms
-from django.contrib.auth.models import User
 from .models import ChargingStationOrder
 
 class ChargingStationOrderForm(forms.ModelForm):
     order_date = forms.DateField(
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-        initial='2023-06-25',
     )
     order_start = forms.TimeField(
         widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-        initial='06:00:00',
     )
     order_finish = forms.TimeField(
         widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-        initial='18:00:00',
     )
-    user = forms.ModelChoiceField(queryset=User.objects.all(), widget=forms.HiddenInput())  # Hidden field for user
 
     class Meta:
         model = ChargingStationOrder
-        fields = ['charging_station', 'order_date', 'order_start', 'order_finish', 'user']
+        fields = ['charging_station', 'order_date', 'order_start', 'order_finish']
         widgets = {
             'charging_station': forms.HiddenInput()
         }
 
     def __init__(self, *args, **kwargs):
-        user_instance = kwargs.pop('user_instance', None)
         super().__init__(*args, **kwargs)
-        if user_instance:
-            self.fields['user'].queryset = User.objects.filter(pk=user_instance.pk)  # Filter queryset to only include the current user
 
-    def clean_user(self):
-        return self.initial['user']  # Ensure the initial user is returned as an instance
+
+        
 
 
 

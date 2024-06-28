@@ -332,8 +332,30 @@ def active_orders(request):
     return render(request, "ActiveOrders.html", {})
 
 
+from django.contrib.auth.decorators import login_required
+from django.db import connection
+from django.shortcuts import render
+
+@login_required
 def order_history(request):
-    return render(request, "OrderHistory.html", {})
+    user_id = request.user.id
+    
+    # Fetch order history for the logged-in user using raw SQL
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT o.id, o.order_date, o.order_start, o.order_finish, s.address
+            FROM myapp_chargingstationorder o
+            JOIN myapp_chargingstation s ON o.charging_station_id = s.id
+            WHERE o.user_id = %s
+            ORDER BY o.order_date DESC, o.order_start DESC
+            """,
+            [user_id]
+        )
+        orders = cursor.fetchall()
+    
+    return render(request, "OrderHistory.html", {'orders': orders})
+
 
 
 
@@ -940,11 +962,13 @@ def show_weekly_calendar(request, station_id):
 
 
 # views.py
-
-from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db import connection
+from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.utils import timezone
 from .forms import ChargingStationOrderForm
-from .models import ChargingStationOrder
 
 @login_required
 def schedule_station(request, station_id):
@@ -967,50 +991,61 @@ def schedule_station(request, station_id):
     station_id, station_address = station
 
     if request.method == 'POST':
-        form = ChargingStationOrderForm(request.POST, user_instance=request.user)
+        form = ChargingStationOrderForm(request.POST)
+        print("*** POST Data dict ***")
+        print(request.POST.dict())
         if form.is_valid():
-            order = form.save(commit=False)
-            order.charging_station_id = station_id
-            order.user = request.user  # Assign the user instance directly
-            order.save()
-            return redirect('home')  # Replace with your success URL
+            order_date = form.cleaned_data['order_date']
+            print(order_date)
+            order_start = form.cleaned_data['order_start'].strftime('%H:%M:%S')
+            print(order_start)
+            order_finish = form.cleaned_data['order_finish'].strftime('%H:%M:%S')
+            print(order_finish)
+            user_id = request.user.id
+            
+            # Insert into ChargingStationOrder using raw SQL
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO myapp_chargingstationorder (charging_station_id, order_date, order_start, order_finish, user_id)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    [station_id, order_date, order_start, order_finish, user_id]
+                )
+            
+            messages.success(request, 'Order scheduled successfully!')
+            return redirect('order history')  # Replace with your success URL
+        else:
+            messages.error(request, 'Failed to schedule the charging station. Please correct the errors below.')
+            print("*** Form Errors ***")
+            print(form.errors)  # Print form errors for debugging
     else:
         initial_data = {
             'charging_station': station_id,
-            'user': request.user  # Assign the user instance directly
         }
-        form = ChargingStationOrderForm(initial=initial_data, user_instance=request.user)
+        form = ChargingStationOrderForm(initial=initial_data)
 
-
-    print("*** POST Data ***")
+    # Debug information
+    print("*** POST Data 2 ***")
     print(request.POST)
-    print("*** Form is not valid ***")
-    print(form.errors)
-    print("*** printing form ****")
+    print("*** Printing form ****")
     print(form)
-    print("*** printing Station ****")
+    print("*** Printing Station ****")
     print(station)
-    print("*** printing Station ID ****")
+    print("*** Printing Station ID ****")
     print(station_id)
-    print("*** printing Current time and date ****")
+    print("*** Printing Current time and date ****")
     print(timezone.now().time(), timezone.now().date())
 
     return render(request, 'schedule_station.html', {'form': form, 'station': station})
 
 
 
-
-# views.py
-
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required  # Ensure the user is logged in
-from .forms import ChargingStationOrderForm
-from .models import ChargingStationOrder
-
 @login_required
 def create_order(request, station_id):
     if request.method == 'POST':
         form = ChargingStationOrderForm(request.POST)
+        print(request.POST)
         if form.is_valid():
             # Save the form data to the database
             order = form.save(commit=False)
