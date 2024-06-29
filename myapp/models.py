@@ -61,6 +61,7 @@ class ChargingStationSchedule(models.Model):
 def __str__(self):
         return f'{self.id} {self.user} {self.charging_station} {self.scheduled_time_start} {self.scheduled_time_finish}'
 
+
 class ChargingStationOrder(models.Model):
     charging_station = models.ForeignKey(ChargingStation, on_delete=models.CASCADE)
     order_date = models.DateField()
