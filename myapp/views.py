@@ -59,17 +59,21 @@ def choose_a_car(request):
     }
     return render(request, 'ChooseACar.html', context)
 
-def delete_user_car(request, car_id):
-    if request.method == 'POST':
-        form = DeleteCarForm(request.POST)
-        if form.is_valid():
-            car_id = form.cleaned_data['car_id']
-            return redirect('user_settings')
-    else:
-        form = DeleteCarForm(initial={'car_id': car_id})
 
-    context = {'form': form}
-    return render(request, 'UserSettings.html', context)
+
+@login_required
+def delete_user_car(request, car_id):
+    user = request.user
+
+    # Get the UserCars instance for the current user
+    usercars = get_object_or_404(UserCars, user=user)
+
+    # Remove the car from the user's car list
+    car = get_object_or_404(Car, id=car_id)
+    usercars.cars.remove(car)
+
+    messages.success(request, 'Car removed from your list successfully.')
+    return redirect('user settings')
 
 def create_charging_station(request):
     if request.method == 'POST':
@@ -329,32 +333,93 @@ def logout_user(request):
 	return redirect('index')
 
 def active_orders(request):
-    return render(request, "ActiveOrders.html", {})
-
-
-from django.contrib.auth.decorators import login_required
-from django.db import connection
-from django.shortcuts import render
-
-@login_required
-def order_history(request):
     user_id = request.user.id
     
-    # Fetch order history for the logged-in user using raw SQL
+    # Get today's date
+    today = timezone.now().date()
+    
+    # Fetch order history for the logged-in user using raw SQL, excluding today's orders
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT o.id, o.order_date, o.order_start, o.order_finish, s.address
             FROM myapp_chargingstationorder o
             JOIN myapp_chargingstation s ON o.charging_station_id = s.id
-            WHERE o.user_id = %s
+            WHERE o.user_id = %s AND o.order_date >= %s
             ORDER BY o.order_date DESC, o.order_start DESC
             """,
-            [user_id]
+            [user_id, today]
+        )
+        orders = cursor.fetchall()
+    
+    return render(request, "ActiveOrders.html", {'orders': orders})
+    
+
+
+import csv
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.db import connection
+from django.shortcuts import render
+from django.utils import timezone
+
+@login_required
+def order_history(request):
+    user_id = request.user.id
+    
+    # Get today's date
+    today = timezone.now().date()
+    
+    # Fetch order history for the logged-in user using raw SQL, excluding today's orders
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT o.id, o.order_date, o.order_start, o.order_finish, s.address
+            FROM myapp_chargingstationorder o
+            JOIN myapp_chargingstation s ON o.charging_station_id = s.id
+            WHERE o.user_id = %s AND o.order_date < %s
+            ORDER BY o.order_date DESC, o.order_start DESC
+            """,
+            [user_id, today]
         )
         orders = cursor.fetchall()
     
     return render(request, "OrderHistory.html", {'orders': orders})
+
+@login_required
+def export_order_history_to_csv(request):
+    user_id = request.user.id
+    
+    # Get today's date
+    today = timezone.now().date()
+    
+    # Fetch order history for the logged-in user using raw SQL, excluding today's orders
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT o.id, o.order_date, o.order_start, o.order_finish, s.address
+            FROM myapp_chargingstationorder o
+            JOIN myapp_chargingstation s ON o.charging_station_id = s.id
+            WHERE o.user_id = %s AND o.order_date < %s
+            ORDER BY o.order_date DESC, o.order_start DESC
+            """,
+            [user_id, today]
+        )
+        orders = cursor.fetchall()
+    
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="order_history.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Order Date', 'Order Start', 'Order Finish', 'Charging Station Address'])
+    
+    for order in orders:
+        writer.writerow(order)
+    
+    return response
+
+
 
 
 
@@ -407,7 +472,7 @@ def user_settings(request):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT brand, car_model, plug_type
+                SELECT myapp_car.id as car_id, brand, car_model, plug_type
                 FROM myapp_usercars_cars
                 INNER JOIN myapp_car ON myapp_usercars_cars.car_id = myapp_car.id
                 WHERE usercars_id = %s
@@ -425,6 +490,8 @@ def user_settings(request):
     }
 
     return render(request, 'UserSettings.html', context)
+
+
 
 
 
@@ -968,6 +1035,7 @@ from django.db import connection
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from datetime import datetime, timedelta
 from .forms import ChargingStationOrderForm
 
 @login_required
@@ -992,15 +1060,10 @@ def schedule_station(request, station_id):
 
     if request.method == 'POST':
         form = ChargingStationOrderForm(request.POST)
-        print("*** POST Data dict ***")
-        print(request.POST.dict())
         if form.is_valid():
             order_date = form.cleaned_data['order_date']
-            print(order_date)
-            order_start = form.cleaned_data['order_start'].strftime('%H:%M:%S')
-            print(order_start)
-            order_finish = form.cleaned_data['order_finish'].strftime('%H:%M:%S')
-            print(order_finish)
+            order_start = form.cleaned_data['order_start'].strftime('%H:%M:%S')  # Convert time to string
+            order_finish = form.cleaned_data['order_finish'].strftime('%H:%M:%S')  # Convert time to string
             user_id = request.user.id
             
             # Insert into ChargingStationOrder using raw SQL
@@ -1014,113 +1077,92 @@ def schedule_station(request, station_id):
                 )
             
             messages.success(request, 'Order scheduled successfully!')
-            return redirect('order history')  # Replace with your success URL
+            return redirect('active orders')  # Replace with your success URL
         else:
             messages.error(request, 'Failed to schedule the charging station. Please correct the errors below.')
-            print("*** Form Errors ***")
-            print(form.errors)  # Print form errors for debugging
     else:
         initial_data = {
             'charging_station': station_id,
         }
         form = ChargingStationOrderForm(initial=initial_data)
 
-    # Debug information
-    print("*** POST Data 2 ***")
-    print(request.POST)
-    print("*** Printing form ****")
-    print(form)
-    print("*** Printing Station ****")
-    print(station)
-    print("*** Printing Station ID ****")
-    print(station_id)
-    print("*** Printing Current time and date ****")
-    print(timezone.now().time(), timezone.now().date())
+    # Calculate available times for the next seven days
+    today = timezone.now().date()
+    available_times = []
+    for i in range(7):
+        day = today + timedelta(days=i)
+        
+        # Fetch existing orders for the day
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT order_start, order_finish
+                FROM myapp_chargingstationorder
+                WHERE charging_station_id = %s AND order_date = %s
+                """,
+                [station_id, day]
+            )
+            existing_orders = cursor.fetchall()
+        
+        # Generate time slots from 00:00 to 23:00, excluding existing orders
+        time_slots = []
+        slot_start = datetime.combine(day, datetime.min.time())
+        for hour in range(24):
+            slot_end = slot_start + timedelta(hours=1)
+            overlap = False
+            for order_start, order_finish in existing_orders:
+                if slot_start.time() < order_finish and slot_end.time() > order_start:
+                    overlap = True
+                    break
+            if not overlap:
+                time_slots.append((slot_start.time(), slot_end.time()))
+            slot_start = slot_end
+        
+        available_times.append((day, time_slots))
 
-    return render(request, 'schedule_station.html', {'form': form, 'station': station})
+    return render(request, 'schedule_station.html', {
+        'form': form,
+        'station': station,
+        'available_times': available_times
+    })
 
 
+
+# views.py
+from django.http import JsonResponse
 
 @login_required
-def create_order(request, station_id):
-    if request.method == 'POST':
-        form = ChargingStationOrderForm(request.POST)
-        print(request.POST)
-        if form.is_valid():
-            # Save the form data to the database
-            order = form.save(commit=False)
-            order.charging_station_id = station_id  # Assign the station_id from URL
-            order.user_id = request.user.id  # Assign the ordering user's ID
-            order.save()
-            return redirect('login/home/')  # Replace with your success URL
-            
-    else:
-        form = ChargingStationOrderForm(initial={'user': request.user.id})  # Initialize user field
-
-    return render(request, 'schedule_station.html', {'form': form})
-
-
-
-
-
-"""
-def schedule_station(request, station_id):
-    station = ChargingStation.objects.get(pk=station_id)
+def get_available_times(request, station_id):
+    order_date = request.GET.get('order_date')
     
-    if request.method == 'POST':
-        form = ChargingStationOrderForm(request.POST)
-        if form.is_valid():
-            order = form.save(commit=False)
-            order.charging_station = station
-            order.user = request.user
-            try:
-                order.clean()
-                order.save()
-                messages.success(request, "Charging slot booked successfully!")
-                return redirect('charging_stations_list')
-            except ValidationError as e:
-                messages.error(request, str(e))
-    else:
-        form = ChargingStationOrderForm()
+    if not order_date:
+        return JsonResponse({'error': 'Invalid date'}, status=400)
 
-    context = {
-        'station': station,
-        'form': form,
-    }
-    return render(request, 'schedule_station.html', context)
+    # Fetch the available times for the specified station and date
+    available_times = get_available_times_for_station(station_id, order_date)
 
+    return JsonResponse({'available_times': available_times})
 
-def get_available_times(station, order_date):
-    available_hours = []
-    start_time = station.working_hours_start
-    end_time = station.working_hours_finish
+def get_available_times_for_station(station_id, order_date):
+    # Example function to fetch available times
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT order_start, order_finish
+            FROM myapp_chargingstationorder
+            WHERE charging_station_id = %s AND order_date = %s
+            """,
+            [station_id, order_date]
+        )
+        times = cursor.fetchall()
 
-    # Create a list of potential time slots throughout the working hours
-    current_time = start_time
-    while current_time < end_time:
-        next_time = (datetime.combine(datetime.today(), current_time) + timedelta(minutes=30)).time()
-        available_hours.append({
-            'start': current_time.strftime('%H:%M'),
-            'end': next_time.strftime('%H:%M')
-        })
-        current_time = next_time
+    # Example available times logic
+    available_times = []
+    for time in times:
+        available_times.append((time[0], time[1]))
 
-    # Filter out booked time slots based on existing orders
-    existing_orders = ChargingStationOrder.objects.filter(
-        charging_station=station, order_date=order_date
-    )
-    booked_times = [(order.order_start.time(), order.order_finish.time()) for order in existing_orders]
+    return available_times
 
-    filtered_hours = []
-    for hour in available_hours:
-        start_time = datetime.strptime(hour['start'], '%H:%M').time()
-        end_time = datetime.strptime(hour['end'], '%H:%M').time()
-        if not any(conflict_start <= start_time < conflict_end or conflict_start < end_time <= conflict_end for conflict_start, conflict_end in booked_times):
-            filtered_hours.append(hour)
-
-    return filtered_hours
-
-"""
 
 
 

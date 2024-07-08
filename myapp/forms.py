@@ -230,7 +230,7 @@ class ChargingStationSearchForm(forms.Form):
 
 
 class DeleteCarForm(forms.Form):
-    car_id = forms.IntegerField(widget=forms.HiddenInput())
+    car_id = forms.IntegerField(widget=forms.HiddenInput)
 
 
 from django import forms

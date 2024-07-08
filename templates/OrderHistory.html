@@ -3,6 +3,8 @@
 {% block content %}
 <h1>Order History</h1>
 
+<a href="{% url 'export_order_history_to_csv' %}" class="btn btn-primary mb-3">Export to CSV</a>
+
 <table class="table table-striped">
     <thead>
         <tr>

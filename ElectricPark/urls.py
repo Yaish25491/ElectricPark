@@ -34,6 +34,7 @@ urlpatterns = [
     path("logout/", views.logout_user, name="logout"),
     path("login/active_orders/", views.active_orders, name="active orders"),
     path("login/order_history/", views.order_history, name="order history"),
+    path('export_order_history_to_csv/', export_order_history_to_csv, name='export_order_history_to_csv'),
     path("login/user_settings/", views.user_settings, name="user settings"),
     path("login/your_charging_stations/", views.charging_stations, name="your charging stations"),
     path("login/test_page/", views.test_page, name="test page"),
@@ -47,7 +48,7 @@ urlpatterns = [
     path('login/search/', views.search_charging_stations, name='search_charging_stations'),
     path('', views.home, name='home'),
     path('update_max_walking_distance/', views.update_max_walking_distance, name='update_max_walking_distance'),
-    path('delete_user_car/<int:car_id>/', views.delete_user_car, name='delete_user_car'),
+    path('delete_user_car/<int:car_id>/', delete_user_car, name='delete_user_car'),
     path('get_info/', views.get_info, name='get_info'),
     path('schedule/<int:station_id>/', schedule_station, name='schedule_station'),
     path('process_schedule/<int:station_id>/', process_schedule, name='process_schedule'),
@@ -55,7 +56,7 @@ urlpatterns = [
     path('login/calendar/<int:station_id>/', views.weekly_calendar, name='weekly_calendar'),
     #path('available-times/<int:station_id>/<str:order_date>/', views.get_available_times, name='get_available_times'),
     path('schedule/<int:station_id>/', schedule_station, name='schedule_station'),
-
+    path('get-available-times/<int:station_id>/', views.get_available_times, name='get_available_times'),
 
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
