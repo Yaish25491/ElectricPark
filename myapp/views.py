@@ -1028,15 +1028,14 @@ def show_weekly_calendar(request, station_id):
     return render(request, 'weekly_calendar.html', context)
 
 
-# views.py
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db import connection
-from django.http import HttpResponse
-from django.shortcuts import render, redirect
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from django.db import connection
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from django.contrib import messages
 from datetime import datetime, timedelta
-from .forms import ChargingStationOrderForm
+from myapp.forms import ChargingStationOrderForm
 
 @login_required
 def schedule_station(request, station_id):
@@ -1055,8 +1054,6 @@ def schedule_station(request, station_id):
     if not station:
         # Return a 404 error if the station is not found
         return HttpResponse(status=404)
-
-    station_id, station_address = station
 
     if request.method == 'POST':
         form = ChargingStationOrderForm(request.POST)
@@ -1088,7 +1085,9 @@ def schedule_station(request, station_id):
 
     # Calculate available times for the next seven days
     today = timezone.now().date()
+    time_slots = [f"{hour:02}:00" for hour in range(24)]
     available_times = []
+
     for i in range(7):
         day = today + timedelta(days=i)
         
@@ -1104,25 +1103,20 @@ def schedule_station(request, station_id):
             )
             existing_orders = cursor.fetchall()
         
-        # Generate time slots from 00:00 to 23:00, excluding existing orders
-        time_slots = []
-        slot_start = datetime.combine(day, datetime.min.time())
-        for hour in range(24):
-            slot_end = slot_start + timedelta(hours=1)
-            overlap = False
-            for order_start, order_finish in existing_orders:
-                if slot_start.time() < order_finish and slot_end.time() > order_start:
-                    overlap = True
-                    break
-            if not overlap:
-                time_slots.append((slot_start.time(), slot_end.time()))
-            slot_start = slot_end
+        # Mark available times
+        available_slots = set(time_slots)
+        for order_start, order_finish in existing_orders:
+            start_hour = int(order_start.strftime('%H'))
+            end_hour = int(order_finish.strftime('%H'))
+            for hour in range(start_hour, end_hour):
+                available_slots.discard(f"{hour:02}:00")
         
-        available_times.append((day, time_slots))
+        available_times.append((day, available_slots))
 
     return render(request, 'schedule_station.html', {
         'form': form,
         'station': station,
+        'time_slots': time_slots,
         'available_times': available_times
     })
 
