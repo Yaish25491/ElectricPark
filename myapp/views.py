@@ -1030,7 +1030,7 @@ def show_weekly_calendar(request, station_id):
 
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
-from django.db import connection
+from django.db import connection, IntegrityError
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.contrib import messages
@@ -1059,22 +1059,31 @@ def schedule_station(request, station_id):
         form = ChargingStationOrderForm(request.POST)
         if form.is_valid():
             order_date = form.cleaned_data['order_date']
-            order_start = form.cleaned_data['order_start'].strftime('%H:%M:%S')  # Convert time to string
-            order_finish = form.cleaned_data['order_finish'].strftime('%H:%M:%S')  # Convert time to string
+            order_start = form.cleaned_data['order_start']
+            order_finish = form.cleaned_data['order_finish']
             user_id = request.user.id
-            
-            # Insert into ChargingStationOrder using raw SQL
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    INSERT INTO myapp_chargingstationorder (charging_station_id, order_date, order_start, order_finish, user_id)
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    [station_id, order_date, order_start, order_finish, user_id]
-                )
-            
-            messages.success(request, 'Order scheduled successfully!')
-            return redirect('active orders')  # Replace with your success URL
+
+            # Check if the selected time slot is available
+            if not is_time_slot_available(station_id, order_date, order_start, order_finish):
+                messages.error(request, 'Selected time slot is not available. Please choose a different time.')
+                form.add_error(None, 'Time slot not available.')
+            else:
+                try:
+                    # Insert into ChargingStationOrder using raw SQL
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            """
+                            INSERT INTO myapp_chargingstationorder (charging_station_id, order_date, order_start, order_finish, user_id)
+                            VALUES (%s, %s, %s, %s, %s)
+                            """,
+                            [station_id, order_date, order_start.strftime('%H:%M:%S'), order_finish.strftime('%H:%M:%S'), user_id]
+                        )
+                    
+                    messages.success(request, 'Order scheduled successfully!')
+                    return redirect('active orders')  # Replace with your success URL
+
+                except IntegrityError:
+                    messages.error(request, 'Failed to schedule the charging station. Please try again later.')
         else:
             messages.error(request, 'Failed to schedule the charging station. Please correct the errors below.')
     else:
@@ -1119,6 +1128,25 @@ def schedule_station(request, station_id):
         'time_slots': time_slots,
         'available_times': available_times
     })
+
+def is_time_slot_available(station_id, order_date, order_start, order_finish):
+    """
+    Check if the given time slot is available for scheduling.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT 1
+            FROM myapp_chargingstationorder
+            WHERE charging_station_id = %s
+            AND order_date = %s
+            AND NOT (order_finish <= %s OR order_start >= %s)
+            LIMIT 1
+            """,
+            [station_id, order_date, order_start.strftime('%H:%M:%S'), order_finish.strftime('%H:%M:%S')]
+        )
+        return not cursor.fetchone()
+
 
 
 

@@ -16,9 +16,6 @@
               <li class="nav-item">
                   <a class="nav-link" href="{% url 'update_charging_station' %}">Update Charging Station</a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'Choose A Car' %}">Add car</a>
-            </li>
               {% else %}
               <li class="nav-item">
                   <a class="nav-link" href="{% url 'register' %}">Register</a>
@@ -46,6 +43,7 @@
                 <ul class="dropdown-menu dropdown-menu-end" style="z-index: 1000;">
                     <li><a class="dropdown-item" href="{% url 'user settings' %}">User Settings</a></li>
                     <li><a class="dropdown-item" href="{% url 'order history' %}">Order History</a></li>
+                    <li><a class="dropdown-item" href="{% url 'Choose A Car' %}">Add car</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
                 </ul>
