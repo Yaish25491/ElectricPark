@@ -1,17 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
-
-<h1>Your Charging Stations</h1>
-
-<table class="table">
-    <thead>
+<div class="text-center">
+    <h1>Your Charging Stations</h1>
+</div>
+<table class="table table-bordered table-striped">
+    <thead class="thead-dark">
         <tr>
             <th>#</th>
             <th>Address</th>
             <th>Charger</th>
             <th>Status</th>
-            <th>Working Hours</th>
-            <th>Actions</th>
+            <th colspan="3" class="text-center">Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -20,39 +19,35 @@
             <td>{{ forloop.counter }}</td>
             <td>{{ charging_station.address }}</td>
             <td>{{ charging_station.charger }}</td>
-            <td>{{ charging_station.station_status }}</td>
-            <td>{{ charging_station.working_hours_start }} - {{ charging_station.working_hours_finish }}</td>
             <td>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ charging_station.id }}">
-                    Edit Working Hours
-                </button>
+                <form method="post" class="form-inline d-flex align-items-center">
+                    {% csrf_token %}
+                    <input type="hidden" name="charging_station_id" value="{{ charging_station.id }}">
+                    <select name="station_status" class="form-control">
+                        <option value="activate" {% if charging_station.station_status == 'Available' %} selected {% endif %} style="color: green;">Activate</option>
+                        <option value="off" {% if charging_station.station_status == 'off' %} selected {% endif %} style="color: red;">Off</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary ml-2">Apply</button>
+                </form>
+            </td>
+            <td class="text-center">
+                <a href="{% url 'open_orders_by_id' charging_station.id %}" class="btn btn-info">Open Orders</a>
+            </td>
+            <td class="text-center">
+                <a href="{% url 'order_history_by_id' charging_station.id %}" class="btn btn-warning">Order History</a>
+            </td>
+            <td class="text-center">
+                <form method="post" onsubmit="return confirm('Are you sure you want to delete this charging station?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="charging_station_id" value="{{ charging_station.id }}">
+                    <input type="hidden" name="delete" value="true">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
             </td>
         </tr>
-        <!-- Modal for editing working hours -->
-        <div class="modal fade" id="editModal{{ charging_station.id }}" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editModalLabel">Edit Working Hours</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form method="post" action = "{% url 'edit_working_hours' %}">
-                            {% csrf_token %}
-                            <label for="working_hours_start">Working Hours Start:</label>
-                            <input type="time" name="working_hours_start" value="{{ charging_station.working_hours_start }}">
-                            <label for="working_hours_finish">Working Hours Finish:</label>
-                            <input type="time" name="working_hours_finish" value="{{ charging_station.working_hours_finish }}">
-                            <input type="hidden" name="charging_station_id" value="{{ charging_station.id }}">
-                            <button type="submit" class="btn btn-primary">Save</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
         {% endfor %}
     </tbody>
 </table>
-
 <a class="btn btn-primary" href="{% url 'Create A Charging Station' %}">Add A New Charging Station</a>
+
 {% endblock %}

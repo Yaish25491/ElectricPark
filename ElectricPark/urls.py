@@ -57,6 +57,10 @@ urlpatterns = [
     #path('available-times/<int:station_id>/<str:order_date>/', views.get_available_times, name='get_available_times'),
     path('schedule/<int:station_id>/', schedule_station, name='schedule_station'),
     path('get-available-times/<int:station_id>/', views.get_available_times, name='get_available_times'),
+    path('charging-stations/', views.charging_stations, name='charging_stations'),
+    path('open_orders/<int:charging_station_id>/', views.open_orders_by_id, name='open_orders_by_id'),
+    path('order_history/<int:charging_station_id>/', views.order_history_by_id, name='order_history_by_id'),
+    path('export_order_history_to_csv/<int:charging_station_id>/', views.export_order_history_to_csv, name='export_order_history_to_csv'),
 
 
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
