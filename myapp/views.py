@@ -506,22 +506,36 @@ def DBcontrol(request):
     return render(request, "DBcontrol.html", {})
 
 
-
-
 @login_required
 def charging_stations(request):
     user = request.user
     charging_stations = ChargingStation.objects.filter(user=user)
 
     if request.method == 'POST':
-        form = ChargingStationForm(request.POST)
-        if form.is_valid():
-            charging_station = ChargingStation.objects.get(id=form.cleaned_data['charging_station_id'])
-            charging_station.working_hours_start = form.cleaned_data['working_hours_start']
-            charging_station.working_hours_finish = form.cleaned_data['working_hours_finish']
+        if 'delete' in request.POST:
+            # Handle the deletion of a charging station
+            charging_station_id = request.POST.get('charging_station_id')
+            charging_station = get_object_or_404(ChargingStation, id=charging_station_id, user=user)
+            charging_station.delete()
+        else:
+            # Handle the update of station status
+            charging_station_id = request.POST.get('charging_station_id')
+            charging_station = get_object_or_404(ChargingStation, id=charging_station_id, user=user)
+            new_status_ui = request.POST.get('station_status')
+            if new_status_ui == 'activate':
+                new_status_db = 'Available'
+            elif new_status_ui == 'off':
+                new_status_db = 'off'
+            else:
+                new_status_db = charging_station.station_status  # Default to current status if not recognized
+            
+            charging_station.station_status = new_status_db
             charging_station.save()
 
     form = ChargingStationViewForm()
+    print("******")
+    print(user)
+    print("******")
 
     context = {
         'charging_stations': charging_stations,
@@ -529,6 +543,84 @@ def charging_stations(request):
     }
 
     return render(request, 'charging_stations.html', context)
+
+def open_orders_by_id(request, charging_station_id):
+    charging_station = get_object_or_404(ChargingStation, id=charging_station_id)
+    
+    # Fetch order history (past orders until yesterday)
+    today = datetime.now().date()
+    
+    # Using raw SQL to fetch order history
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, order_date, order_start, order_finish, charging_station_id, user_id
+            FROM myapp_chargingstationorder
+            WHERE charging_station_id = %s AND order_date >= %s
+        """, [charging_station_id, today])
+        
+        # Fetch all rows from the cursor
+        open_orders = cursor.fetchall()
+
+    context = {
+        'charging_station': charging_station,
+        'open_orders': open_orders,
+    }
+    
+    return render(request, 'open_orders_by_id.html', context)
+
+
+import csv
+from django.http import HttpResponse
+
+def order_history_by_id(request, charging_station_id):
+    charging_station = get_object_or_404(ChargingStation, id=charging_station_id)
+    
+    # Fetch order history (past orders until yesterday)
+    today = datetime.now().date()
+    
+    # Using raw SQL to fetch order history
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, order_date, order_start, order_finish, charging_station_id, user_id
+            FROM myapp_chargingstationorder
+            WHERE charging_station_id = %s AND order_date < %s
+        """, [charging_station_id, today])
+        
+        # Fetch all rows from the cursor
+        order_history = cursor.fetchall()
+
+    context = {
+        'charging_station': charging_station,
+        'order_history': order_history,
+    }
+    return render(request, 'order_history_by_id.html', context)
+
+def export_order_history_to_csv(request, charging_station_id):
+    charging_station = get_object_or_404(ChargingStation, id=charging_station_id)
+    
+    today = datetime.now().date()
+    
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, order_date, order_start, order_finish, charging_station_id, user_id
+            FROM myapp_chargingstationorder
+            WHERE charging_station_id = %s AND order_date < %s
+        """, [charging_station_id, today])
+        
+        order_history = cursor.fetchall()
+
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="order_history_{charging_station_id}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Order Date', 'Order Start', 'Order Finish', 'Charging Station ID', 'User ID'])
+    
+    for order in order_history:
+        writer.writerow(order)
+    
+    return response
+
 
 
 

@@ -22,12 +22,20 @@
             <td>{{ charging_station.charger }}</td>
             <td>{{ charging_station.station_status }}</td>
             <td>
-                <form method="post">
+                <form method="post" class="form-inline">
                     {% csrf_token %}
-                    <input type="time" name="working_hours_start" value="{{ charging_station.working_hours_start }}">
-                    <input type="time" name="working_hours_finish" value="{{ charging_station.working_hours_finish }}">
+                    <input type="time" name="working_hours_start" value="{{ charging_station.working_hours_start }}" class="form-control">
+                    <input type="time" name="working_hours_finish" value="{{ charging_station.working_hours_finish }}" class="form-control">
                     <input type="hidden" name="charging_station_id" value="{{ charging_station.id }}">
                     <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </td>
+            <td>
+                <form method="post" onsubmit="return confirm('Are you sure you want to delete this charging station?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="charging_station_id" value="{{ charging_station.id }}">
+                    <input type="hidden" name="delete" value="true">
+                    <button type="submit" class="btn btn-danger">Delete</button>
                 </form>
             </td>
         </tr>
