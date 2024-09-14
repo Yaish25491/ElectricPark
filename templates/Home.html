@@ -107,8 +107,8 @@
                       .then(data => {
                           infoWindow.setContent(`
                               <h3>${address}</h3>
-                              <p>Charger: ${data.charger}</p>
-                              <p>Description: ${data.description}</p>
+                              <p><strong>Charger: ${data.charger}</strong></p>
+                              <p><strong>Description: ${data.description}</strong></p>
                           `);
                       })
                       .catch(error => {
@@ -250,3 +250,4 @@
   </body>
 </html>
 {% endblock %}
+#בשלב הזה הכל עובד

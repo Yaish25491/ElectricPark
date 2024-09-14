@@ -17,6 +17,7 @@ from django.core.exceptions import ValidationError
 from operator import itemgetter
 from django.utils import timezone
 from datetime import datetime, timedelta, time
+import csv
 
 
 
@@ -140,6 +141,7 @@ def home(request):
                             SELECT id, address
                             FROM myapp_chargingstation
                             WHERE charger_id = %s
+                                AND station_status != 'off'
                             """,
                             [plug_type_id]
                         )
@@ -265,7 +267,8 @@ def home(request):
     print(filtered_charging_stations)
     print("********** results ends here **********")
     return render(request, 'Home.html', context)
-
+# סינון עובד ספטמבר 14
+# 11:30
 
 def schedule_station(request, station_id):
     charging_station = ChargingStation.objects.get(id=station_id)
@@ -274,9 +277,7 @@ def schedule_station(request, station_id):
 
 def process_schedule(request, station_id):
     if request.method == 'POST':
-        # Add logic to handle the form submission and schedule the time window
-        # Make sure to check if the selected time window is available
-        # Update the ChargingStationSchedule table accordingly
+
         return redirect('home')
 
 
@@ -569,8 +570,6 @@ def open_orders_by_id(request, charging_station_id):
     return render(request, 'open_orders_by_id.html', context)
 
 
-import csv
-from django.http import HttpResponse
 
 def order_history_by_id(request, charging_station_id):
     charging_station = get_object_or_404(ChargingStation, id=charging_station_id)
@@ -788,17 +787,18 @@ def get_addresses(request):
 def get_info(request):
     address = request.GET.get('address')
     
-    charging_stations = ChargingStation.objects.filter(address=address)
+    try:
+        # Get the charging station by the provided address
+        charging_station = ChargingStation.objects.select_related('charger').get(address=address)
+        
+        # Prepare the data to return, including charger type and description
+        data = {
+            'charger': f"{charging_station.charger.plug_type} {charging_station.charger.speed}" if charging_station.charger else 'N/A',
+            'description': charging_station.description or 'No description available'
+        }
+        return JsonResponse(data)
     
-    if charging_stations.exists():
-        # If there are multiple charging stations, include information for all of them
-        data = [{
-            'charger': str(charging_station.charger),  # Convert Charger object to string
-            'description': charging_station.description,
-        } for charging_station in charging_stations]
-        print(data)
-        return JsonResponse(data, safe=False)
-    else:
+    except ChargingStation.DoesNotExist:
         return JsonResponse({'error': 'Charging station not found'}, status=404)
 
 
