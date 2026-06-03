@@ -146,7 +146,7 @@ def home(request):
                         charging_stations = cursor.fetchall()
 
                         # Step 4: Requires API key for Google Maps API
-                        gmaps = googlemaps.Client(key='AIzaSyCBlESR_sT43qVHo5P3Jquk9SuHsZwpL6Q')
+                        gmaps = googlemaps.Client(key=os.environ.get('GOOGLE_MAPS_API_KEY', ''))
 
                         # Step 5: Iterate through each charging station
                         for charging_station in charging_stations:
@@ -878,7 +878,7 @@ def distance_calculation(request):
         charging_stations = cursor.fetchall()
 
     # Step 4: Requires API key for Google Maps API
-    gmaps = googlemaps.Client(key='AIzaSyCBlESR_sT43qVHo5P3Jquk9SuHsZwpL6Q&callback=initMap')
+    gmaps = googlemaps.Client(key=os.environ.get('GOOGLE_MAPS_API_KEY', ''))
 
     # Step 5: Iterate through each charging station
     for charging_station in charging_stations:
